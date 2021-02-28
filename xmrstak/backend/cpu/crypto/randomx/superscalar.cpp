@@ -194,14 +194,16 @@ namespace randomx {
 		SuperscalarInstructionType type_;
 		std::vector<MacroOp> ops_;
 		int latency_;
-		int resultOp_ = 0;
-		int dstOp_ = 0;
+		int resultOp_;
+		int dstOp_;
 		int srcOp_;
 
 		SuperscalarInstructionInfo(const char* name)
-			: name_(name), type_(SuperscalarInstructionType::INVALID), latency_(0) {}
+			: name_(name), type_(SuperscalarInstructionType::INVALID), latency_(0), 
+				resultOp_(0), dstOp_(0), srcOp_(0) {}
 		SuperscalarInstructionInfo(const char* name, SuperscalarInstructionType type, const MacroOp& op, int srcOp)
-			: name_(name), type_(type), latency_(op.getLatency()), srcOp_(srcOp) {
+			: name_(name), type_(type), latency_(op.getLatency()), 
+				resultOp_(0), dstOp_(0), srcOp_(srcOp) {
 			ops_.push_back(MacroOp(op));
 		}
 		template <size_t N>
@@ -286,7 +288,8 @@ namespace randomx {
 		int index_;
 		const int* counts_;
 		int opsCount_;
-		DecoderBuffer() : index_(-1) {}
+		DecoderBuffer() : name_(0), index_(-1) {}
+
 		static const DecoderBuffer decodeBuffer484;
 		static const DecoderBuffer decodeBuffer7333;
 		static const DecoderBuffer decodeBuffer3733;
@@ -555,10 +558,10 @@ namespace randomx {
 		const SuperscalarInstructionInfo* info_;
 		int src_ = -1;
 		int dst_ = -1;
-		int mod_;
-		uint32_t imm32_;
-		SuperscalarInstructionType opGroup_;
-		int opGroupPar_;
+		int mod_ = 0;
+		uint32_t imm32_ = 0;
+		SuperscalarInstructionType opGroup_ = SuperscalarInstructionType::INVALID;
+		int opGroupPar_ = 0;
 		bool canReuse_ = false;
 		bool groupParIsSource_ = false;
 

@@ -34,21 +34,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace randomx {
 
-	class SuperscalarProgram {
+	class SuperscalarProgram final {
 	public:
-		Instruction& operator()(int pc) {
+		FORCE_INLINE
+		Instruction& operator()(int pc) noexcept {
 			return programBuffer[pc];
 		}
-		uint32_t getSize() {
+		FORCE_INLINE
+		uint32_t getSize() const noexcept {
 			return size;
 		}
-		void setSize(uint32_t val) {
+		FORCE_INLINE
+		void setSize(uint32_t val) noexcept {
 			size = val;
 		}
-		int getAddressRegister() {
+		FORCE_INLINE
+		int getAddressRegister() const noexcept {
 			return addrReg;
 		}
-		void setAddressRegister(int val) {
+		FORCE_INLINE
+		void setAddressRegister(int val) noexcept {
 			addrReg = val;
 		}
 

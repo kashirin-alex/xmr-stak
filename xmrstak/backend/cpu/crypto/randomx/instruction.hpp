@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace randomx {
 
-	class Instruction;
-
 	enum class InstructionType : uint16_t {
 		IADD_RS = 0,
 		IADD_M = 1,
@@ -69,32 +67,38 @@ namespace randomx {
 		NOP = 29,
 	};
 
-	class Instruction {
-	public:
-		uint32_t getImm32() const {
+	struct Instruction final {
+
+		FORCE_INLINE
+		uint32_t getImm32() const noexcept {
 			return load32(&imm32);
 		}
-		void setImm32(uint32_t val) {
+		FORCE_INLINE
+		void setImm32(uint32_t val) noexcept {
 			return store32(&imm32, val);
 		}
-		uint32_t getModMem() const {
+		FORCE_INLINE
+		uint32_t getModMem() const noexcept {
 			return mod & 3; //bits 0-1
 		}
-		uint32_t getModShift() const {
+		FORCE_INLINE
+		uint32_t getModShift() const noexcept {
 			return (mod >> 2) & 3; //bits 2-3
 		}
-		uint32_t getModCond() const {
+		FORCE_INLINE
+		uint32_t getModCond() const noexcept {
 			return mod >> 4; //bits 4-7
 		}
-		void setMod(uint8_t val) {
+		FORCE_INLINE
+		void setMod(uint8_t val) noexcept {
 			mod = val;
 		}
 
-		uint8_t opcode;
-		uint8_t dst;
-		uint8_t src;
-		uint8_t mod;
-		uint32_t imm32;
+		uint8_t 	opcode;
+		uint8_t 	dst;
+		uint8_t 	src;
+		uint8_t 	mod;
+		uint32_t  imm32;
 	};
 
 	static_assert(sizeof(Instruction) == 8, "Invalid size of struct randomx::Instruction");

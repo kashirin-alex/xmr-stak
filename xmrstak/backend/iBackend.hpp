@@ -50,9 +50,9 @@ struct iBackend
 	BackendType backendType = UNKNOWN;
 	uint64_t iLastStamp = get_timestamp_ms();
 	double avgHashPerMsec = 0.0;
-
-	void updateStats(uint64_t numNewHashes, size_t poolId)
-	{
+	
+  __attribute__((__always_inline__)) inline
+	void updateStats(uint64_t numNewHashes, size_t poolId) {
 		uint64_t iStamp = get_timestamp_ms();
 		double timeDiff = static_cast<double>(iStamp - iLastStamp);
 		iLastStamp = iStamp;

@@ -9,7 +9,7 @@ endif()
 # enforce C++11
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -63,7 +63,7 @@ else()
 endif()
 
 # option to add static libgcc and libstdc++
-option(CMAKE_LINK_STATIC "link as much as possible libraries static" OFF)
+option(CMAKE_LINK_STATIC "link as much as possible libraries static" ON)
 
 ################################################################################
 # Find CUDA
@@ -453,21 +453,27 @@ endif()
 
 # activate static libgcc and libstdc++ linking
 if(CMAKE_LINK_STATIC)
+
+    set(CMAKE_C_FLAGS "-m64 -flto -fuse-linker-plugin -ffat-lto-objects ${CMAKE_C_FLAGS}" )
+    set(CMAKE_CXX_FLAGS "-m64 -flto -fuse-linker-plugin -ffat-lto-objects ${CMAKE_CXX_FLAGS}" )
     set(BUILD_SHARED_LIBRARIES OFF)
     set(DL_LIB ${CMAKE_DL_LIBS})
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
     if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
-        set(LIBS "-static-libgcc -static-libstdc++ ${LIBS}")
+        set(LIBS "-s -static-libgcc -static-libstdc++ ${LIBS}") # -static 
     endif()
+
+    find_library(TCMALLOC_LIB NAMES libtcmalloc_minimal.a tcmalloc_minimal)
+    set(LIBS ${LIBS} ${TCMALLOC_LIB})
+
 endif()
 
 
 # compile generic backend files
 file(GLOB BACKEND_CPP
     "xmrstak/*.cpp"
-    "xmrstak/backend/cpu/*.cpp"
+    "xmrstak/backend/cpu/minethd.cpp"
     "xmrstak/backend/*.cpp"
-    "xmrstak/backend/cpu/crypto/*.cpp"
     "xmrstak/http/*.cpp"
     "xmrstak/misc/*.cpp"
     "xmrstak/net/*.cpp")
@@ -577,3 +583,8 @@ else()
     # this rule is used if the install prefix is the build directory
     install(CODE "MESSAGE(\"xmr-stak installed to folder 'bin'\")")
 endif()
+
+
+# cmake ../ -DMICROHTTPD_ENABLE=OFF -DCMAKE_LINK_STATIC=ON -DOPENSSL_USE_STATIC_LIBS=ON -DCMAKE_SYSTEM_PREFIX_PATH=/root/glibc_built
+
+# cmake ../ -DMICROHTTPD_ENABLE=OFF -DCMAKE_LINK_STATIC=ON -DOPENSSL_USE_STATIC_LIBS=ON -DOpenSSL_ENABLE=OFF

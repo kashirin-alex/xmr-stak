@@ -39,7 +39,6 @@ struct cryptonight_ctx
 	cn_mainloop_fun loop_fn = nullptr;
 	cn_hash_fun hash_fn = nullptr;
 	uint8_t* fun_data = nullptr;
-	xmrstak_algo last_algo = invalid_algo;
 	uint32_t numa = 0;
 
 	randomx_vm* m_rx_vm = nullptr;

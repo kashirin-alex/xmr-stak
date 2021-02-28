@@ -50,4 +50,6 @@ extern "C" {
 	void randomx_sshash_end();
 	void randomx_sshash_init();
 	void randomx_program_end();
+	
+	uint64_t randomx_reciprocal_fast(uint64_t divisor);
 }

@@ -5,12 +5,6 @@
 #include <cstring>
 #include <inttypes.h>
 
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#include <intrin.h>
-#else
-#include <cpuid.h>
-#endif
 
 namespace xmrstak
 {

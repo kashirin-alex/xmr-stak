@@ -336,20 +336,12 @@ void executor::on_pool_have_job(size_t pool_id, pool_job& oPoolJob)
 	jpsock* pool = pick_pool_by_id(pool_id);
 
 	xmrstak::pool_data dat;
-	dat.iSavedNonce = oPoolJob.iSavedNonce;
 	dat.pool_id = pool_id;
 
 	xmrstak::globalStates::inst().switch_work(
 		xmrstak::miner_work(oPoolJob.sJobID, oPoolJob.bWorkBlob,
 			oPoolJob.iWorkLen, oPoolJob.iTarget, pool->is_nicehash(), pool_id, oPoolJob.iBlockHeight,oPoolJob.seed_hash),
 		dat);
-
-	if(dat.pool_id != pool_id)
-	{
-		jpsock* prev_pool;
-		if((prev_pool = pick_pool_by_id(dat.pool_id)) != nullptr)
-			prev_pool->save_nonce(dat.iSavedNonce);
-	}
 
 	if(iPoolDiff != pool->get_current_diff())
 	{
@@ -732,7 +724,7 @@ void executor::hashrate_report(std::string& out)
 		std::string motd;
 		for(jpsock& pool : pools)
 		{
-			motd.empty();
+			motd.clear();
 			if(pool.get_pool_motd(motd) && motd_filter_console(motd))
 			{
 				out.append("Message from ").append(pool.get_pool_addr()).append(":\n");
@@ -991,7 +983,7 @@ void executor::http_hashrate_report(std::string& out)
 		std::string motd;
 		for(jpsock& pool : pools)
 		{
-			motd.empty();
+			motd.clear();
 			if(pool.get_pool_motd(motd) && motd_filter_web(motd))
 			{
 				if(!have_motd)

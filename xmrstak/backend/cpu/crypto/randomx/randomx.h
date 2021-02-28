@@ -58,8 +58,8 @@ struct randomx_cache;
 class randomx_vm;
 
 
-struct RandomX_ConfigurationBase
-{
+struct RandomX_ConfigurationBase {
+
 	RandomX_ConfigurationBase();
 
 	void Apply();
@@ -80,7 +80,6 @@ struct RandomX_ConfigurationBase
 
 	uint32_t ProgramSize;
 	uint32_t ProgramIterations;
-	uint32_t ProgramCount;
 
 	uint32_t JumpBits;
 	uint32_t JumpOffset;
@@ -138,13 +137,13 @@ struct RandomX_ConfigurationBase
 
 	uint32_t ConditionMask_Calculated;
 
-#if defined(XMRIG_ARMv8)
+	#if defined(XMRIG_ARMv8)
 	uint32_t Log2_ScratchpadL1;
 	uint32_t Log2_ScratchpadL2;
 	uint32_t Log2_ScratchpadL3;
 	uint32_t Log2_DatasetBaseSize;
 	uint32_t Log2_CacheSize;
-#endif
+	#endif
 
 	int CEIL_IADD_RS;
 	int CEIL_IADD_M;
@@ -178,19 +177,9 @@ struct RandomX_ConfigurationBase
 	int CEIL_NOP;
 };
 
-struct RandomX_ConfigurationMonero : public RandomX_ConfigurationBase {};
-struct RandomX_ConfigurationWownero : public RandomX_ConfigurationBase { RandomX_ConfigurationWownero(); };
-struct RandomX_ConfigurationLoki : public RandomX_ConfigurationBase { RandomX_ConfigurationLoki(); };
-struct RandomX_ConfigurationArqma : public RandomX_ConfigurationBase { RandomX_ConfigurationArqma(); };
-struct RandomX_ConfigurationSafex : public RandomX_ConfigurationBase { RandomX_ConfigurationSafex(); };
-struct RandomX_ConfigurationKeva : public RandomX_ConfigurationBase { RandomX_ConfigurationKeva(); };
+struct RandomX_ConfigurationMonero final : public RandomX_ConfigurationBase {};
 
 extern RandomX_ConfigurationMonero RandomX_MoneroConfig;
-extern RandomX_ConfigurationWownero RandomX_WowneroConfig;
-extern RandomX_ConfigurationLoki RandomX_LokiConfig;
-extern RandomX_ConfigurationArqma RandomX_ArqmaConfig;
-extern RandomX_ConfigurationSafex RandomX_SafexConfig;
-extern RandomX_ConfigurationKeva RandomX_KevaConfig;
 
 extern RandomX_ConfigurationBase RandomX_CurrentConfig;
 
@@ -203,9 +192,6 @@ void randomx_apply_config(const T& config)
 	RandomX_CurrentConfig.Apply();
 }
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 /**
  * Creates a randomx_cache structure and allocates memory for RandomX Cache.
@@ -287,17 +273,6 @@ RANDOMX_EXPORT void randomx_release_dataset(randomx_dataset *dataset);
 
 /**
  * Creates and initializes a RandomX virtual machine.
- *
- * @param flags is any combination of these 4 flags (each flag can be set or not set):
- *        RANDOMX_FLAG_LARGE_PAGES - allocate scratchpad memory in large pages
- *        RANDOMX_FLAG_HARD_AES - virtual machine will use hardware accelerated AES
- *        RANDOMX_FLAG_FULL_MEM - virtual machine will use the full dataset
- *        RANDOMX_FLAG_JIT - virtual machine will use a JIT compiler
- *        The numeric values of the flags are ordered so that a higher value will provide
- *        faster hash calculation and a lower numeric value will provide higher portability.
- *        Using RANDOMX_FLAG_DEFAULT (all flags not set) works on all platforms, but is the slowest.
- * @param cache is a pointer to an initialized randomx_cache structure. Can be
- *        NULL if RANDOMX_FLAG_FULL_MEM is set.
  * @param dataset is a pointer to a randomx_dataset structure. Can be NULL
  *        if RANDOMX_FLAG_FULL_MEM is not set.
  *
@@ -308,17 +283,7 @@ RANDOMX_EXPORT void randomx_release_dataset(randomx_dataset *dataset);
  *         (3) cache parameter is NULL and RANDOMX_FLAG_FULL_MEM is not set
  *         (4) dataset parameter is NULL and RANDOMX_FLAG_FULL_MEM is set
 */
-RANDOMX_EXPORT randomx_vm *randomx_create_vm(randomx_flags flags, randomx_cache *cache, randomx_dataset *dataset, uint8_t *scratchpad);
-
-/**
- * Reinitializes a virtual machine with a new Cache. This function should be called anytime
- * the Cache is reinitialized with a new key.
- *
- * @param machine is a pointer to a randomx_vm structure that was initialized
- *        without RANDOMX_FLAG_FULL_MEM. Must not be NULL.
- * @param cache is a pointer to an initialized randomx_cache structure. Must not be NULL.
-*/
-RANDOMX_EXPORT void randomx_vm_set_cache(randomx_vm *machine, randomx_cache* cache);
+RANDOMX_EXPORT randomx_vm *randomx_create_vm(randomx_dataset *dataset, uint8_t *scratchpad);
 
 /**
  * Reinitializes a virtual machine with a new Dataset.
@@ -336,22 +301,5 @@ RANDOMX_EXPORT void randomx_vm_set_dataset(randomx_vm *machine, randomx_dataset 
 */
 RANDOMX_EXPORT void randomx_destroy_vm(randomx_vm *machine);
 
-/**
- * Calculates a RandomX hash value.
- *
- * @param machine is a pointer to a randomx_vm structure. Must not be NULL.
- * @param input is a pointer to memory to be hashed. Must not be NULL.
- * @param inputSize is the number of bytes to be hashed.
- * @param output is a pointer to memory where the hash will be stored. Must not
- *        be NULL and at least RANDOMX_HASH_SIZE bytes must be available for writing.
-*/
-RANDOMX_EXPORT void randomx_calculate_hash(randomx_vm *machine, const void *input, size_t inputSize, void *output);
-
-RANDOMX_EXPORT void randomx_calculate_hash_first(randomx_vm* machine, uint64_t (&tempHash)[8], const void* input, size_t inputSize);
-RANDOMX_EXPORT void randomx_calculate_hash_next(randomx_vm* machine, uint64_t (&tempHash)[8], const void* nextInput, size_t nextInputSize, void* output);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif

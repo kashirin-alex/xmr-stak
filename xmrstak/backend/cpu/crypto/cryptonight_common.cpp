@@ -300,3 +300,4 @@ void cryptonight_free_ctx(cryptonight_ctx* ctx)
 
 	_mm_free(ctx);
 }
+

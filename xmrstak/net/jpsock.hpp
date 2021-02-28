@@ -70,7 +70,6 @@ class jpsock
 	bool have_sock_error() { return bHaveSocketError; }
 	inline uint64_t get_current_diff() { return iJobDiff; }
 
-	void save_nonce(uint32_t nonce);
 	bool get_current_job(pool_job& job);
 
 	bool set_socket_error(const char* a);

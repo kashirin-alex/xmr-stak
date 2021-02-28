@@ -8,11 +8,10 @@
 
 #include <atomic>
 
-namespace xmrstak
-{
+namespace xmrstak {
 
-struct globalStates
-{
+struct globalStates {
+
 	static inline globalStates& inst()
 	{
 		auto& env = environment::inst();
@@ -26,30 +25,52 @@ struct globalStates
 	}
 
 	//pool_data is in-out winapi style
-	void switch_work(miner_work&& pWork, pool_data& dat);
+	void switch_work(miner_work&& pWork, pool_data& dat) {
+		jobLock.WriteLock();
 
-	inline void calc_start_nonce(uint32_t& nonce, bool use_nicehash, uint32_t reserve_count)
-	{
-		if(use_nicehash)
-			nonce = (nonce & 0xFF000000) | iGlobalNonce.fetch_add(reserve_count);
-		else
-			nonce = iGlobalNonce.fetch_add(reserve_count);
+		iGlobalJobNo++;
+
+		std::swap(dat.pool_id, pool_id);
+		oGlobalWork = std::move(pWork);
+
+		uint32_t nonce = *(uint32_t*)(oGlobalWork.bWorkBlob + 39);
+		if(oGlobalWork.bNiceHash)
+			nonce &= 0xFF000000;
+
+		for(uint8_t i=0; i < iThreadCount; ++i) {
+			if(oGlobalWork.bNiceHash) {
+				iJobNonce[i] = nonce | (((UINT32_MAX >> 8) / iThreadCount) * i);
+			} else {
+				iJobNonce[i] = (UINT32_MAX / iThreadCount) * i;
+			}
+		}
+
+		jobLock.UnLock();
 	}
 
-	void consume_work(miner_work& threadWork, uint64_t& currentJobId);
+	void consume_work(uint8_t iThreadNo, miner_work& threadWork, uint64_t& currentJobId, uint32_t& nonce) {
+		jobLock.ReadLock();
+		if(currentJobId != iGlobalJobNo.load(std::memory_order_relaxed)) {
+			threadWork = oGlobalWork;
+			currentJobId = iGlobalJobNo.load(std::memory_order_relaxed);
+			nonce = iJobNonce[iThreadNo];
+		}
+		jobLock.UnLock();
+	}
 
-	miner_work oGlobalWork;
+	miner_work 						oGlobalWork;
 	std::atomic<uint64_t> iGlobalJobNo;
 	std::atomic<uint64_t> iConsumeCnt;
-	std::atomic<uint32_t> iGlobalNonce;
-	uint64_t iThreadCount;
-	size_t pool_id = invalid_pool_id;
+	uint32_t 							iJobNonce[255] = {0};
+	uint64_t 							iThreadCount;
+	size_t 								pool_id;
 
   private:
 	globalStates() :
-		iThreadCount(0),
 		iGlobalJobNo(0),
-		iConsumeCnt(0)
+		iConsumeCnt(0),
+		iThreadCount(0),
+		pool_id(invalid_pool_id)
 	{
 	}
 

@@ -40,17 +40,22 @@ namespace randomx {
 		uint32_t readReg0, readReg1, readReg2, readReg3;
 	};
 
-	class Program {
+	class Program final {
 	public:
-		Instruction& operator()(int pc) {
+
+		FORCE_INLINE
+		Instruction& operator()(int pc) noexcept {
 			return programBuffer[pc];
 		}
-		uint64_t getEntropy(int i) {
+		FORCE_INLINE
+		uint64_t getEntropy(int i) noexcept {
 			return load64(&entropyBuffer[i]);
 		}
-		uint32_t getSize() {
+		FORCE_INLINE
+		uint32_t getSize() noexcept {
 			return RandomX_CurrentConfig.ProgramSize;
 		}
+		
 	private:
 		uint64_t entropyBuffer[16];
 		Instruction programBuffer[RANDOMX_PROGRAM_MAX_SIZE];

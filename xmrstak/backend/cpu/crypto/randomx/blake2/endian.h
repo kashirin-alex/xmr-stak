@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef PORTABLE_ENDIAN_H
+#define PORTABLE_ENDIAN_H
+
 #include <stdint.h>
 #include <string.h>
 
@@ -107,3 +111,6 @@ static FORCE_INLINE void store64(void *dst, uint64_t w) {
 	*p++ = (uint8_t)w;
 #endif
 }
+
+
+#endif // PORTABLE_ENDIAN_H

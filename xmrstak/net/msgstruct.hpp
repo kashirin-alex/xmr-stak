@@ -16,17 +16,13 @@ struct pool_job
 	uint8_t bWorkBlob[128];
 	uint64_t iTarget;
 	uint32_t iWorkLen;
-	uint32_t iSavedNonce;
 	uint64_t iBlockHeight = uint64_t(-1);
 	std::array<uint8_t, 32> seed_hash = {{0}};
 
-	pool_job() :
-		iWorkLen(0),
-		iSavedNonce(0) {}
+	pool_job() : iWorkLen(0)  {}
 	pool_job(const char* sJobID, uint64_t iTarget, const uint8_t* bWorkBlob, uint32_t iWorkLen) :
 		iTarget(iTarget),
-		iWorkLen(iWorkLen),
-		iSavedNonce(0)
+		iWorkLen(iWorkLen)
 	{
 		assert(iWorkLen <= sizeof(pool_job::bWorkBlob));
 		memcpy(this->sJobID, sJobID, sizeof(pool_job::sJobID));

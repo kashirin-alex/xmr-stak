@@ -32,15 +32,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace randomx {
 
-	class Blake2Generator {
+
+class Blake2Generator {
 	public:
 		Blake2Generator(const void* seed, size_t seedSize, int nonce = 0);
-		uint8_t getByte();
-		uint32_t getUInt32();
+
+		uint8_t getByte() {
+			checkData(1);
+			return data[dataIndex++];
+		}
+
+		uint32_t getUInt32() {
+			checkData(4);
+		
+    	uint64_t ret = *(const uint64_t *)&data[dataIndex];
+			dataIndex += 4;
+			return ret;
+		}
+
 	private:
 		void checkData(const size_t);
 
-		uint8_t data[64];
+		uint8_t data[64] = {0};
 		size_t dataIndex;
-	};
+	
+};
 }
