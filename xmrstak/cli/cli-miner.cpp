@@ -992,6 +992,8 @@ int do_benchmark(int block_version, int wait_sec, int work_sec)
 	uint64_t iStartStamp = get_timestamp_ms();
 
 	std::this_thread::sleep_for(std::chrono::seconds(work_sec));
+	uint64_t iTimestamp = get_timestamp_ms();
+
 	// stop hashing
 	xmrstak::globalStates::inst().switch_work(xmrstak::miner_work(), dat);
 	printer::inst()->print_msg(L0, "Wait %d sec to collect benchmark data", 2);
@@ -1001,7 +1003,7 @@ int do_benchmark(int block_version, int wait_sec, int work_sec)
 	for(uint32_t i = 0; i < pvThreads->size(); i++)
 	{
 		double fHps = pvThreads->at(i)->iHashCount;
-		fHps /= (pvThreads->at(i)->iTimestamp - iStartStamp) / 1000.0;
+		fHps /= (iTimestamp - iStartStamp) / 1000.0; // == by work_sec
 
 		auto bType = static_cast<xmrstak::iBackend::BackendType>(pvThreads->at(i)->backendType);
 		std::string name(xmrstak::iBackend::getName(bType));
@@ -1014,3 +1016,4 @@ int do_benchmark(int block_version, int wait_sec, int work_sec)
 	printer::inst()->print_msg(L0, "Benchmark are measured without the dataset creation.");
 	return 0;
 }
+

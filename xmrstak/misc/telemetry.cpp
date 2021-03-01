@@ -101,12 +101,13 @@ double telemetry::calc_telemetry_data(size_t iLastMillisec, size_t iThread)
 	return fHashes / fTime;
 }
 
-void telemetry::push_perf_value(size_t iThd, uint64_t iHashCount, uint64_t iTimestamp)
+void telemetry::push_perf_value(size_t iThd, uint64_t iHashCount)
 {
+	auto ts = get_timestamp_ms();
 	mtx[iThd].WriteLock();
 	size_t iTop = iBucketTop[iThd];
 	ppHashCounts[iThd][iTop] = iHashCount;
-	ppTimestamps[iThd][iTop] = iTimestamp;
+	ppTimestamps[iThd][iTop] = ts;
 
 	iBucketTop[iThd] = (iTop + 1) & iBucketMask;
 	mtx[iThd].UnLock();

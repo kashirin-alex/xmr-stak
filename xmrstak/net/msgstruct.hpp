@@ -233,11 +233,7 @@ inline size_t get_timestamp()
 };
 
 //Get millisecond timestamp
-inline size_t get_timestamp_ms()
-{
+inline size_t get_timestamp_ms() {
 	using namespace std::chrono;
-	if(high_resolution_clock::is_steady)
-		return time_point_cast<milliseconds>(high_resolution_clock::now()).time_since_epoch().count();
-	else
-		return time_point_cast<milliseconds>(steady_clock::now()).time_since_epoch().count();
+	return time_point_cast<milliseconds>(high_resolution_clock::now()).time_since_epoch().count();
 }

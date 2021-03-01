@@ -13,7 +13,7 @@ class telemetry
 {
   public:
 	telemetry(size_t iThd);
-	void push_perf_value(size_t iThd, uint64_t iHashCount, uint64_t iTimestamp);
+	void push_perf_value(size_t iThd, uint64_t iHashCount);
 	double calc_telemetry_data(size_t iLastMillisec, size_t iThread);
 
   private:

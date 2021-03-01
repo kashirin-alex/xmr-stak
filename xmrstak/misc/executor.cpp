@@ -590,8 +590,7 @@ void executor::ex_main()
 
 		case EV_PERF_TICK:
 			for(i = 0; i < pvThreads->size(); i++)
-				telem->push_perf_value(i, pvThreads->at(i)->iHashCount.load(std::memory_order_relaxed),
-					pvThreads->at(i)->iTimestamp.load(std::memory_order_relaxed));
+				telem->push_perf_value(i, pvThreads->at(i)->iHashCount.load(std::memory_order_relaxed));
 
 			if((cnt++ & 0xF) == 0) //Every 16 ticks
 			{

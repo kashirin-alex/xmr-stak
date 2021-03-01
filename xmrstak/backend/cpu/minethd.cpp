@@ -356,7 +356,6 @@ void minethd::work_main() {
 	randomX_global_ctx::inst().init(ctx->numa);
 	globalStates::inst().iConsumeCnt++;
 
-	uint64_t iCount = 0;
 	uint8_t bHashOut[32];
 	uint64_t* piHashVal = (uint64_t*)(bHashOut + 24);
 	uint32_t* piNonce;
@@ -396,6 +395,8 @@ void minethd::work_main() {
 			vm.calculate_hash_next(
 				tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize, bHashOut);
 
+			iHashCount.fetch_add(1, std::memory_order_relaxed);
+
 			if(*piHashVal < oWork.iTarget) {
 				executor::inst()->push_event(
 					ex_event(
@@ -405,13 +406,8 @@ void minethd::work_main() {
 				);
 			}
 			current_nonce = iNonce;
-
-			if(++iCount == 500) {
-				updateStats(iCount, oWork.iPoolId);
-				iCount = 0;
-				std::this_thread::yield();
-			}
 		}
+		std::this_thread::yield();
 	}
 
 	cryptonight_free_ctx(ctx);
