@@ -49,19 +49,17 @@ namespace randomx {
 __attribute__((__always_inline__)) inline
 uint64_t getSmallPositiveFloatBits(uint64_t entropy) {
 	auto exponent = entropy >> 59; //0..31
-	auto mantissa = entropy & mantissaMask;
 	exponent += exponentBias;
 	exponent &= exponentMask;
 	exponent <<= mantissaSize;
-	return exponent | mantissa;
+	return exponent | (entropy & mantissaMask);
 }
 
 __attribute__((__always_inline__)) inline
 uint64_t getStaticExponent(uint64_t entropy) {
-	auto exponent = constExponentBits;
-	exponent |= (entropy >> (64 - staticExponentBits)) << dynamicExponentBits;
-	exponent <<= mantissaSize;
-	return exponent;
+	entropy >>= 64 - staticExponentBits;
+	entropy <<= dynamicExponentBits;
+	return (constExponentBits | entropy) << mantissaSize;
 }
 
 __attribute__((__always_inline__)) inline
@@ -100,30 +98,27 @@ class randomx_vm final {
 
   //__attribute__((__noinline__))
   __attribute__((__always_inline__)) inline
-	void calculate_hash_first(uint64_t (&tempHash)[8], 
+	void calculate_hash_first(void* outHash, size_t outlen, 
 														const void* input, size_t inputSize) noexcept {
-		Blake2b::run(tempHash, sizeof(tempHash), input, inputSize);
-		fillAes1Rx4<SW_AES>(tempHash, ScratchpadSize, scratchpad); //initScratchpad(tempHash);
+		Blake2b::run(outHash, outlen, input, inputSize);
+		fillAes1Rx4<SW_AES>(outHash, ScratchpadSize, scratchpad);
 	}
 
 
   //__attribute__((__noinline__))
   __attribute__((__always_inline__)) inline
-	void calculate_hash_next(uint64_t (&tempHash)[8], 
+	void calculate_hash_next(void* outHash, size_t outlen, 
 													 const void* nextInput, size_t nextInputSize, 
 													 void* output) noexcept {
 		resetRoundingMode();
 		for(uint32_t chain = 1; chain < RX0_ProgramCount; ++chain) {
-			run(tempHash);
-			Blake2b::run(tempHash, sizeof(tempHash), &reg, sizeof(randomx::RegisterFile));
+			run(outHash);
+			Blake2b::run(outHash, outlen, &reg, sizeof(randomx::RegisterFile));
 		}
-		run(tempHash);
-
-		// Finish current hash and fill the scratchpad for the next hash at the same time
-		Blake2b::run(tempHash, sizeof(tempHash), nextInput, nextInputSize);
-
-		//hashAndFill(output, RANDOMX_HASH_SIZE, tempHash);
-	  hashAndFillAes1Rx4<SW_AES>(scratchpad, ScratchpadSize, &reg.a, tempHash);
+		run(outHash);
+		Blake2b::run(outHash, outlen, nextInput, nextInputSize);
+		
+	  hashAndFillAes1Rx4<SW_AES>(scratchpad, ScratchpadSize, &reg.a, outHash);
     Blake2b::run(output, RANDOMX_HASH_SIZE, &reg, sizeof(randomx::RegisterFile));
 	}
 
@@ -192,7 +187,7 @@ class randomx_vm final {
 	void run(void* seed) noexcept {
 		compiler.prepare();
 		
-  	fillAes4Rx4<SW_AES>( //generateProgram(seed);
+  	fillAes4Rx4<SW_AES>(
 			seed, 128 + RandomX_CurrentConfig.ProgramSize * 8, &program);
 
 		initialize();

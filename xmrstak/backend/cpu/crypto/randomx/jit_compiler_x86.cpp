@@ -647,6 +647,6 @@ namespace randomx {
 		emitByte(0x90, code, codePos);
 	}
 
-	alignas(64) InstructionGeneratorX86 JitCompilerX86::engine[256] = {};
+	alignas(64) InstructionGeneratorX86 JitCompilerX86::engine[ENGINE_SIZE] = {};
 
 }

@@ -139,6 +139,8 @@ static const uint32_t RegisterNeedsSib_shift_16 = RegisterNeedsSib << 16;
 
 
 
+#define ENGINE_SIZE 256
+
 
 class JitCompilerX86 final {
 	public:
@@ -149,8 +151,10 @@ class JitCompilerX86 final {
 
 	FORCE_INLINE 
 	void prepare() noexcept {
-		for (size_t i = 0; i < sizeof(engine); i += 64)
-			rx_prefetch_nta((const char*)(&engine) + i);
+		rx_prefetch_nta((const char*)(&engine) + 0); // 900ns less than loop
+		rx_prefetch_nta((const char*)(&engine) + 64);
+		rx_prefetch_nta((const char*)(&engine) + 128);
+		rx_prefetch_nta((const char*)(&engine) + 192);
 		for (size_t i = 0; i < sizeof(RandomX_CurrentConfig); i += 64)
 			rx_prefetch_nta((const char*)(&RandomX_CurrentConfig) + i);
 	}
@@ -162,18 +166,17 @@ class JitCompilerX86 final {
 
 		generateProgramPrologue(prog, pcfg);
 
-		uint8_t* p;
-		uint32_t n;
-		if (flags & RANDOMX_FLAG_AMD) {
-			p = RandomX_CurrentConfig.codeReadDatasetRyzenTweaked;
-			n = RandomX_CurrentConfig.codeReadDatasetRyzenTweakedSize;
+		if(flags & RANDOMX_FLAG_AMD) {
+			memcpy(code + codePos, 
+						RandomX_CurrentConfig.codeReadDatasetRyzenTweaked, 
+						RandomX_CurrentConfig.codeReadDatasetRyzenTweakedSize);
+		 	codePos += RandomX_CurrentConfig.codeReadDatasetRyzenTweakedSize;
+		}	else {
+			memcpy(code + codePos, 
+						RandomX_CurrentConfig.codeReadDatasetTweaked, 
+						RandomX_CurrentConfig.codeReadDatasetTweakedSize);
+		 	codePos += RandomX_CurrentConfig.codeReadDatasetTweakedSize;
 		}
-		else {
-			p = RandomX_CurrentConfig.codeReadDatasetTweaked;
-			n = RandomX_CurrentConfig.codeReadDatasetTweakedSize;
-		}
-		memcpy(code + codePos, p, n);
-		codePos += n;
 
 		generateProgramEpilogue(prog, pcfg);
 	}
@@ -267,12 +270,10 @@ class JitCompilerX86 final {
 		codePos = codePosFirst;
 
 		//mark all registers as used
-		uint64_t* r = (uint64_t*)registerUsage;
 		uint64_t k = codePos;
 		k |= k << 32;
-		for (unsigned j = 0; j < RegisterCountFlt; ++j) {
-			r[j] = k;
-		}
+		uint64_t* r = (uint64_t*)registerUsage;
+		r[0] = r[1] = r[2] = r[3] = k; //RegisterCountFlt = 4
 
 		for (int i = 0, n = static_cast<int>(RandomX_CurrentConfig.ProgramSize); i < n; ++i) {
 			Instruction& instr1 = prog(i);
@@ -512,7 +513,7 @@ class JitCompilerX86 final {
 
 	public:
 	
-	alignas(64) static InstructionGeneratorX86 engine[256];
+	alignas(64) static InstructionGeneratorX86 engine[ENGINE_SIZE];
 
 	void h_IADD_RS(const Instruction&) noexcept;
 	void h_IADD_M(const Instruction&) noexcept;

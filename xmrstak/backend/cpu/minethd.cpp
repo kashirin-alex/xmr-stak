@@ -387,12 +387,14 @@ void minethd::work_main() {
 
 		piNonce = (uint32_t*)(oWork.bWorkBlob + 39);
 		*piNonce = current_nonce = iNonce;
-		vm.calculate_hash_first(tempHash, oWork.bWorkBlob, oWork.iWorkSize);
+		vm.calculate_hash_first(
+			tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize);
 
 		while(iGlobalJobNo.load(std::memory_order_relaxed) == iJobNo) {
 
 			*piNonce = ++iNonce;
-			vm.calculate_hash_next(tempHash, oWork.bWorkBlob, oWork.iWorkSize, bHashOut);
+			vm.calculate_hash_next(
+				tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize, bHashOut);
 
 			if(*piHashVal < oWork.iTarget) {
 				executor::inst()->push_event(
