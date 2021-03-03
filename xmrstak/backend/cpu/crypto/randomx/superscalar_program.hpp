@@ -64,10 +64,6 @@ namespace randomx {
 #endif
 			;
 		int addrReg;
-		double ipc;
-		int codeSize;
-		int macroOps;
-		int decodeCycles;
 		int cpuLatency;
 		int asicLatency;
 		int mulCount;

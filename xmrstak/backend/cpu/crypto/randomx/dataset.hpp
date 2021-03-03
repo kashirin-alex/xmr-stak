@@ -34,25 +34,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/common.hpp"
 #include "crypto/randomx/superscalar_program.hpp"
 #include "crypto/randomx/allocator.hpp"
+#include "crypto/randomx/jit_compiler_x86.hpp"
+
 
 /* Global scope for C binding */
 struct randomx_dataset {
 	uint8_t* memory = nullptr;
 };
 
+
 /* Global scope for C binding */
 struct randomx_cache {
 	uint8_t* 											memory = nullptr;
-	randomx::JitCompiler* 				jit;
+	randomx::JitCompiler 				  jit;
 	randomx::CacheInitializeFunc* initialize;
 	randomx::DatasetInitFunc* 		datasetInit;
 	randomx::SuperscalarProgram 	programs[RANDOMX_CACHE_MAX_ACCESSES];
 	std::vector<uint64_t> 				reciprocalCache;
-
-	bool isInitialized() {
-		return programs[0].getSize() != 0;
-	}
 };
+
 
 //A pointer to a standard-layout struct object points to its initial member
 static_assert(std::is_standard_layout<randomx_dataset>(), "randomx_dataset must be a standard-layout struct");
@@ -72,7 +72,7 @@ namespace randomx {
 	void deallocCache(randomx_cache* cache);
 
 	void initCache(randomx_cache*, const void*, size_t);
+
 	void initCacheCompile(randomx_cache*, const void*, size_t);
-	void initDatasetItem(randomx_cache* cache, uint8_t* out, uint64_t blockNumber);
-	void initDataset(randomx_cache* cache, uint8_t* dataset, uint32_t startBlock, uint32_t endBlock);
+
 }

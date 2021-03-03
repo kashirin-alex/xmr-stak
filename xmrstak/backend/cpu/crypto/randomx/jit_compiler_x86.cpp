@@ -156,30 +156,12 @@ namespace randomx {
 		memcpy(code + epilogueOffset, codeEpilogue, epilogueSize);
 
 		codePosFirst = prologueSize + (hasXOP ? loopLoadXOPSize : loopLoadSize);
-
-		#ifdef XMRIG_FIX_RYZEN
-			mainLoopBounds.first = code + prologueSize;
-			mainLoopBounds.second = code + epilogueOffset;
-		#endif
 	}
 
 	JitCompilerX86::~JitCompilerX86() {
 		freePagedMemory(allocatedCode, CodeSize);
 	}
 
-	/*
-	void JitCompilerX86::generateProgramLight(Program& prog, ProgramConfiguration& pcfg, uint32_t datasetOffset) {
-		generateProgramPrologue(prog, pcfg);
-		emit(RandomX_CurrentConfig.codeReadDatasetLightSshInitTweaked, readDatasetLightInitSize, code, codePos);
-		*(uint32_t*)(code + codePos) = 0xc381;
-		codePos += 2;
-		emit32(datasetOffset / CacheLineSize, code, codePos);
-		emitByte(0xe8, code, codePos);
-		emit32(superScalarHashOffset - (codePos + 4), code, codePos);
-		emit(codeReadDatasetLightSshFin, readDatasetLightFinSize, code, codePos);
-		generateProgramEpilogue(prog, pcfg);
-	}
-	*/
 
 
 
@@ -627,13 +609,7 @@ namespace randomx {
 		}
 		codePos += 2;
 
-		//mark all registers as used
-		uint64_t* r = (uint64_t*) registerUsage;
-		uint64_t k = codePos;
-		k |= k << 32;
-		for (unsigned j = 0; j < RegisterCountFlt; ++j) {
-			r[j] = k;
-		}
+		mark_all_registers_used();
 	}
 
 	__attribute__((__noinline__))

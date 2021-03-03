@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/configuration.h"
 #include "crypto/randomx/program.hpp"
 #include "crypto/randomx/blake2/endian.h"
-#include "crypto/randomx/superscalar.hpp"
 #include "crypto/randomx/intrin_portable.h"
 #include "crypto/randomx/reciprocal.h"
 
@@ -656,7 +655,6 @@ namespace randomx {
 		const DecoderBuffer* decodeBuffer = &DecoderBuffer::Default;
 		SuperscalarInstruction currentInstruction = SuperscalarInstruction::Null;
 		int macroOpIndex = 0;
-		int codeSize = 0;
 		int macroOpCount = 0;
 		int cycle = 0;
 		int depCycle = 0;
@@ -780,7 +778,6 @@ namespace randomx {
 					ri.lastOpPar = currentInstruction.getGroupPar();
 					if (trace) std::cout << "; RETIRED at cycle " << retireCycle << std::endl;
 				}
-				codeSize += mop.getSize();
 				bufferIndex++;
 				macroOpIndex++;
 				macroOpCount++;
@@ -799,8 +796,6 @@ namespace randomx {
 			}
 			++cycle;
 		}
-
-		double ipc = (macroOpCount / (double)retireCycle);
 
 		memset(prog.asicLatencies, 0, sizeof(prog.asicLatencies));
 
@@ -829,10 +824,6 @@ namespace randomx {
 
 		prog.cpuLatency = retireCycle;
 		prog.asicLatency = asicLatencyMax;
-		prog.codeSize = codeSize;
-		prog.macroOps = macroOpCount;
-		prog.decodeCycles = decodeCycle;
-		prog.ipc = ipc;
 		prog.mulCount = mulCount;
 		
 
@@ -850,51 +841,5 @@ namespace randomx {
 		}*/
 	}
 
-	void executeSuperscalar(int_reg_t(&r)[8], SuperscalarProgram& prog, std::vector<uint64_t> *reciprocals) {
-		for (unsigned j = 0; j < prog.getSize(); ++j) {
-			Instruction& instr = prog(j);
-			switch ((SuperscalarInstructionType)instr.opcode)
-			{
-			case SuperscalarInstructionType::ISUB_R:
-				r[instr.dst] -= r[instr.src];
-				break;
-			case SuperscalarInstructionType::IXOR_R:
-				r[instr.dst] ^= r[instr.src];
-				break;
-			case SuperscalarInstructionType::IADD_RS:
-				r[instr.dst] += r[instr.src] << instr.getModShift();
-				break;
-			case SuperscalarInstructionType::IMUL_R:
-				r[instr.dst] *= r[instr.src];
-				break;
-			case SuperscalarInstructionType::IROR_C:
-				r[instr.dst] = rotr64(r[instr.dst], instr.getImm32());
-				break;
-			case SuperscalarInstructionType::IADD_C7:
-			case SuperscalarInstructionType::IADD_C8:
-			case SuperscalarInstructionType::IADD_C9:
-				r[instr.dst] += signExtend2sCompl(instr.getImm32());
-				break;
-			case SuperscalarInstructionType::IXOR_C7:
-			case SuperscalarInstructionType::IXOR_C8:
-			case SuperscalarInstructionType::IXOR_C9:
-				r[instr.dst] ^= signExtend2sCompl(instr.getImm32());
-				break;
-			case SuperscalarInstructionType::IMULH_R:
-				r[instr.dst] = mulh(r[instr.dst], r[instr.src]);
-				break;
-			case SuperscalarInstructionType::ISMULH_R:
-				r[instr.dst] = smulh(r[instr.dst], r[instr.src]);
-				break;
-			case SuperscalarInstructionType::IMUL_RCP:
-				if (reciprocals != nullptr)
-					r[instr.dst] *= (*reciprocals)[instr.getImm32()];
-				else
-					r[instr.dst] *= randomx_reciprocal(instr.getImm32());
-				break;
-			default:
-				UNREACHABLE;
-			}
-		}
-	}
+
 }

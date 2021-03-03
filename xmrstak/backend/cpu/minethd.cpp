@@ -74,7 +74,6 @@
 #include "xmrstak/backend/cpu/crypto/cryptonight_common.cpp"
 #include "xmrstak/backend/cpu/crypto/cryptonight_1.cpp"
 #include "xmrstak/backend/cpu/crypto/randomx/randomx.cpp"
-#include "xmrstak/backend/cpu/crypto/randomx/superscalar.cpp"
 
 
 namespace xmrstak
@@ -369,7 +368,7 @@ void minethd::work_main(uint8_t iThreadCount) {
 		if(iProbes)
 			probe_it_avg = iProbeIt / iProbes;
 
-		probe_it = iNonce = probe_it_avg / 2;
+		probe_it = iNonce = probe_it_avg / iThreadCount;// / (iThreadCount + 1); // / 2
 		printer::inst()->print_msg(L0, 
 			"new JobId=%u ThreadNo=%u Nonce=%u step=%u avg=%u", 
 			uint32_t(iJobNo), uint32_t(iThreadNo), iNonce_init, iNonce, probe_it_avg);

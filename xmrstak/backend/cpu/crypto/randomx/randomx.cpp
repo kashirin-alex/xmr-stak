@@ -145,29 +145,10 @@ void RandomX_ConfigurationBase::Apply() {
 
 	#if defined(_M_X64) || defined(__x86_64__)
 		*(uint32_t*)(codeShhPrefetchTweaked + 3) = ArgonMemory * 16 - 1;
-		// Not needed right now because all variants use default dataset base size
-		//const uint32_t DatasetBaseMask = DatasetBaseSize - RANDOMX_DATASET_ITEM_SIZE;
-		//*(uint32_t*)(codeReadDatasetTweaked + 9) = DatasetBaseMask;
-		//*(uint32_t*)(codeReadDatasetTweaked + 24) = DatasetBaseMask;
-		//*(uint32_t*)(codeReadDatasetLightSshInitTweaked + 59) = DatasetBaseMask;
-
 		*(uint32_t*)(codePrefetchScratchpadTweaked + 4) = ScratchpadL3Mask64_Calculated;
 		*(uint32_t*)(codePrefetchScratchpadTweaked + 18) = ScratchpadL3Mask64_Calculated;
 
 		#define JIT_HANDLE(x, prev) randomx::JitCompilerX86::engine[k] = &randomx::JitCompilerX86::h_##x
-
-	#elif defined(XMRIG_ARMv8)
-
-		Log2_ScratchpadL1 = Log2(ScratchpadL1_Size);
-		Log2_ScratchpadL2 = Log2(ScratchpadL2_Size);
-		Log2_ScratchpadL3 = Log2(ScratchpadL3_Size);
-		Log2_DatasetBaseSize = Log2(DatasetBaseSize);
-		Log2_CacheSize = Log2((ArgonMemory * randomx::ArgonBlockSize) / randomx::CacheLineSize);
-
-		#define JIT_HANDLE(x, prev) randomx::JitCompilerA64::engine[k] = &randomx::JitCompilerA64::h_##x
-
-	#else
-		#define JIT_HANDLE(x, prev)
 	#endif
 
 	constexpr int CEIL_NULL = 0;
@@ -248,9 +229,8 @@ randomx_cache *randomx_alloc_cache(randomx_flags flags) {
 
 		try {
 			cache = new randomx_cache();
-			cache->jit = new randomx::JitCompiler();
 			cache->initialize = &randomx::initCacheCompile;
-			cache->datasetInit = cache->jit->getDatasetInitFunc();
+			cache->datasetInit = cache->jit.getDatasetInitFunc();
 
 			switch (flags & (RANDOMX_FLAG_JIT | RANDOMX_FLAG_LARGE_PAGES)) {
 

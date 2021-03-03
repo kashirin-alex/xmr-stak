@@ -22,12 +22,6 @@ License: MIT License and BSD License
 
 -------------------------------------------------------------------------
 
-Package: PicoSHA2
-Authors: okdshin
-License: MIT License
-
--------------------------------------------------------------------------
-
 Package: cpputil
 Authors: Will Zhang
 Source: https://github.com/willzhang4a58/cpputil

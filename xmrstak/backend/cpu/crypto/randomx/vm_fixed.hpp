@@ -170,11 +170,6 @@ class randomx_vm final {
   }
 
   __attribute__((__always_inline__)) inline
-	randomx::RegisterFile *getRegisterFile() noexcept {
-		return &reg;
-	}
-
-  __attribute__((__always_inline__)) inline
 	const void* getScratchpad() noexcept {
 		return scratchpad;
 	}

@@ -76,15 +76,18 @@ typedef __m128d rx_vec_f128;
 #define rx_div_vec_f128 		_mm_div_pd
 #define rx_sqrt_vec_f128 		_mm_sqrt_pd
 
-FORCE_INLINE rx_vec_f128 rx_swap_vec_f128(rx_vec_f128 a) noexcept {
+FORCE_INLINE 
+rx_vec_f128 rx_swap_vec_f128(rx_vec_f128 a) noexcept {
 	return _mm_shuffle_pd(a, a, 1);
 }
 
-FORCE_INLINE rx_vec_f128 rx_set_vec_f128(uint64_t x1, uint64_t x0) noexcept {
+FORCE_INLINE 
+rx_vec_f128 rx_set_vec_f128(uint64_t x1, uint64_t x0) noexcept {
 	return _mm_castsi128_pd(_mm_set_epi64x(x1, x0));
 }
 
-FORCE_INLINE rx_vec_f128 rx_set1_vec_f128(uint64_t x) noexcept {
+FORCE_INLINE 
+rx_vec_f128 rx_set1_vec_f128(uint64_t x) noexcept {
 	return _mm_castsi128_pd(_mm_set1_epi64x(x));
 }
 

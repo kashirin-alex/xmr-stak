@@ -34,11 +34,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/common.hpp"
 
 #include "crypto/randomx/jit_compiler_x86_static.hpp"
-#include "crypto/randomx/superscalar.hpp"
 #include "crypto/randomx/program.hpp"
 #include "crypto/randomx/reciprocal.h"
 #include "crypto/randomx/virtual_memory.hpp"
-
+#include "crypto/randomx/superscalar.hpp"
 
 namespace randomx {
 
@@ -176,8 +175,6 @@ class JitCompilerX86 final {
 		generateProgramEpilogue(prog, pcfg);
 	}
 
-	//void generateProgramLight(Program&, ProgramConfiguration&, uint32_t);
-
 
 	FORCE_INLINE 
 	DatasetInitFunc* getDatasetInitFunc() noexcept {
@@ -223,10 +220,6 @@ class JitCompilerX86 final {
 	uint32_t codePosFirst;
 	uint32_t vm_flags;
 
-	#ifdef XMRIG_FIX_RYZEN
-		std::pair<const void*, const void*> mainLoopBounds;
-	#endif
-
 	bool BranchesWithin32B = false;
 	bool hasAVX;
 	bool hasXOP;
@@ -264,11 +257,7 @@ class JitCompilerX86 final {
 		memcpy(code + prologueSize - 48, &pcfg.eMask, sizeof(pcfg.eMask));
 		codePos = codePosFirst;
 
-		//mark all registers as used
-		uint64_t k = codePos;
-		k |= k << 32;
-		uint64_t* r = (uint64_t*)registerUsage;
-		r[0] = r[1] = r[2] = r[3] = k; //RegisterCountFlt = 4
+		mark_all_registers_used();
 
 		for (int i = 0, n = static_cast<int>(RandomX_CurrentConfig.ProgramSize); i < n; ++i) {
 			Instruction& instr1 = prog(i);
@@ -332,6 +321,14 @@ class JitCompilerX86 final {
 		emit32(prologueSize - codePos - 4, code, codePos);
 		emitByte(0xe9, code, codePos);
 		emit32(epilogueOffset - codePos - 4, code, codePos);
+	}
+
+	FORCE_INLINE
+	void mark_all_registers_used() noexcept {
+		uint64_t k = codePos;
+		k |= k << 32;
+		uint64_t* r = (uint64_t*)registerUsage;
+		r[0] = r[1] = r[2] = r[3] = k; //RegisterCountFlt = 4
 	}
 
 	static FORCE_INLINE 

@@ -42,7 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/common.hpp"
 #include "crypto/randomx/dataset.hpp"
 #include "crypto/randomx/virtual_memory.hpp"
-#include "crypto/randomx/superscalar.hpp"
 #include "crypto/randomx/blake2_generator.hpp"
 #include "crypto/randomx/reciprocal.h"
 #include "crypto/randomx/blake2/endian.h"
@@ -60,8 +59,6 @@ namespace randomx {
 	void deallocCache(randomx_cache* cache) {
 		if (cache->memory != nullptr)
 			Allocator::freeMemory(cache->memory, RANDOMX_CACHE_MAX_SIZE);
-		if (cache->jit != nullptr)
-			delete cache->jit;
 	}
 
 	template void deallocCache<DefaultAllocator>(randomx_cache* cache);
@@ -136,54 +133,8 @@ namespace randomx {
 
 	void initCacheCompile(randomx_cache* cache, const void* key, size_t keySize) {
 		initCache(cache, key, keySize);
-		cache->jit->generateSuperscalarHash(cache->programs, cache->reciprocalCache);
-		cache->jit->generateDatasetInitCode();
+		cache->jit.generateSuperscalarHash(cache->programs, cache->reciprocalCache);
+		cache->jit.generateDatasetInitCode();
 	}
 
-	constexpr uint64_t superscalarMul0 = 6364136223846793005ULL;
-	constexpr uint64_t superscalarAdd1 = 9298411001130361340ULL;
-	constexpr uint64_t superscalarAdd2 = 12065312585734608966ULL;
-	constexpr uint64_t superscalarAdd3 = 9306329213124626780ULL;
-	constexpr uint64_t superscalarAdd4 = 5281919268842080866ULL;
-	constexpr uint64_t superscalarAdd5 = 10536153434571861004ULL;
-	constexpr uint64_t superscalarAdd6 = 3398623926847679864ULL;
-	constexpr uint64_t superscalarAdd7 = 9549104520008361294ULL;
-
-	static inline uint8_t* getMixBlock(uint64_t registerValue, uint8_t *memory) {
-		const uint32_t mask = (RandomX_CurrentConfig.ArgonMemory * randomx::ArgonBlockSize) / CacheLineSize - 1;
-		return memory + (registerValue & mask) * CacheLineSize;
-	}
-
-	void initDatasetItem(randomx_cache* cache, uint8_t* out, uint64_t itemNumber) {
-		int_reg_t rl[8];
-		uint8_t* mixBlock;
-		uint64_t registerValue = itemNumber;
-		rl[0] = (itemNumber + 1) * superscalarMul0;
-		rl[1] = rl[0] ^ superscalarAdd1;
-		rl[2] = rl[0] ^ superscalarAdd2;
-		rl[3] = rl[0] ^ superscalarAdd3;
-		rl[4] = rl[0] ^ superscalarAdd4;
-		rl[5] = rl[0] ^ superscalarAdd5;
-		rl[6] = rl[0] ^ superscalarAdd6;
-		rl[7] = rl[0] ^ superscalarAdd7;
-		for (unsigned i = 0; i < RandomX_CurrentConfig.CacheAccesses; ++i) {
-			mixBlock = getMixBlock(registerValue, cache->memory);
-			rx_prefetch_nta(mixBlock);
-			SuperscalarProgram& prog = cache->programs[i];
-
-			executeSuperscalar(rl, prog, &cache->reciprocalCache);
-
-			for (unsigned q = 0; q < 8; ++q)
-				rl[q] ^= load64_native(mixBlock + 8 * q);
-
-			registerValue = rl[prog.getAddressRegister()];
-		}
-
-		memcpy(out, &rl, CacheLineSize);
-	}
-
-	void initDataset(randomx_cache* cache, uint8_t* dataset, uint32_t startItem, uint32_t endItem) {
-		for (uint32_t itemNumber = startItem; itemNumber < endItem; ++itemNumber, dataset += CacheLineSize)
-			initDatasetItem(cache, dataset, itemNumber);
-	}
 }

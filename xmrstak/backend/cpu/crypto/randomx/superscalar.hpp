@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace randomx {
 	                                              //                  Intel Ivy Bridge reference
-	enum class SuperscalarInstructionType {       //uOPs (decode)   execution ports         latency       code size
+	enum class SuperscalarInstructionType : int8_t {       //uOPs (decode)   execution ports         latency       code size
 		ISUB_R = 0,                               //1               p015                    1               3 (sub)
 		IXOR_R = 1,                               //1               p015                    1               3 (xor)
 		IADD_RS = 2,                              //1               p01                     1               4 (lea)
@@ -56,5 +56,7 @@ namespace randomx {
 	};
 
 	void generateSuperscalar(SuperscalarProgram& prog, Blake2Generator& gen);
-	void executeSuperscalar(uint64_t(&r)[8], SuperscalarProgram& prog, std::vector<uint64_t> *reciprocals = nullptr);
+
 }
+
+#include "crypto/randomx/superscalar.cpp"
