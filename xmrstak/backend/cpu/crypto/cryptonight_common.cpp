@@ -184,27 +184,24 @@ size_t cryptonight_init(size_t use_fast_mem, size_t use_mlock, alloc_msg* msg)
 #endif // _WIN32
 }
 
-cryptonight_ctx* cryptonight_alloc_ctx(size_t use_fast_mem, size_t use_mlock, alloc_msg* msg)
-{
+void cryptonight_alloc_ctx(size_t use_fast_mem, size_t use_mlock, 
+													 alloc_msg* msg, cryptonight_ctx& ctx) {
+
 	auto neededAlgorithms = ::jconf::inst()->GetCurrentCoinSelection().GetAllAlgorithms();
 
 	size_t hashMemSize = 0;
-	for(const auto algo : neededAlgorithms)
-	{
+	for(const auto algo : neededAlgorithms) {
 		hashMemSize = std::max(hashMemSize, algo.L3());
 	}
 
-	cryptonight_ctx* ptr = (cryptonight_ctx*)_mm_malloc(sizeof(cryptonight_ctx), 4096);
-
-	if(use_fast_mem == 0)
-	{
+	if(use_fast_mem == 0) {
 		// use 2MiB aligned memory
-		ptr->long_state = (uint8_t*)_mm_malloc(hashMemSize, hashMemSize);
-		ptr->ctx_info[0] = 0;
-		ptr->ctx_info[1] = 0;
-		if(ptr->long_state == NULL)
+		ctx.long_state = (uint8_t*)_mm_malloc(hashMemSize, hashMemSize);
+		ctx.ctx_info[0] = 0;
+		ctx.ctx_info[1] = 0;
+		if(ctx.long_state == NULL)
 			printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: _mm_malloc was not able to allocate %s byte", std::to_string(hashMemSize).c_str());
-		return ptr;
+		return;
 	}
 
 #ifdef _WIN32
@@ -213,69 +210,63 @@ cryptonight_ctx* cryptonight_alloc_ctx(size_t use_fast_mem, size_t use_mlock, al
 	if(hashMemSize > iLargePageMin)
 		iLargePageMin *= 2;
 
-	ptr->long_state = (uint8_t*)VirtualAlloc(NULL, iLargePageMin,
+	ctx.long_state = (uint8_t*)VirtualAlloc(NULL, iLargePageMin,
 		MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
 
-	if(ptr->long_state == NULL)
-	{
-		_mm_free(ptr);
+	if(ctx.long_state == NULL) {
 		if(bRebootDesirable)
 			msg->warning = "VirtualAlloc failed. Reboot might help.";
 		else
 			msg->warning = "VirtualAlloc failed.";
-		return NULL;
-	}
-	else
-	{
-		ptr->ctx_info[0] = 1;
-		return ptr;
+		return;
+	} else {
+		ctx.ctx_info[0] = 1;
+		return;
 	}
 #else
 //http://man7.org/linux/man-pages/man2/mmap.2.html
 #if defined(__APPLE__)
-	ptr->long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
+	ctx.long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANON, VM_FLAGS_SUPERPAGE_SIZE_2MB, 0);
 #elif defined(__FreeBSD__)
-	ptr->long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
+	ctx.long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANONYMOUS | MAP_ALIGNED_SUPER | MAP_PREFAULT_READ, -1, 0);
 #elif defined(__OpenBSD__)
-	ptr->long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
+	ctx.long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANON, -1, 0);
 #else
-	ptr->long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
+	ctx.long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
 		MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE, -1, 0);
-	if(ptr->long_state == MAP_FAILED)
+	if(ctx.long_state == MAP_FAILED)
 	{
 		// try without MAP_HUGETLB for crappy kernels
 		msg->warning = "mmap with HUGETLB failed, attempting without it (you should fix your kernel)";
-		ptr->long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
+		ctx.long_state = (uint8_t*)mmap(NULL, hashMemSize, PROT_READ | PROT_WRITE,
 			MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
 	}
 #endif
 
-	if(ptr->long_state == MAP_FAILED)
+	if(ctx.long_state == MAP_FAILED)
 	{
-		_mm_free(ptr);
 		msg->warning = "mmap failed, check attribute 'use_slow_memory' in 'config.txt'";
-		return NULL;
+		return;
 	}
 
-	ptr->ctx_info[0] = 1;
+	ctx.ctx_info[0] = 1;
 
-	if(madvise(ptr->long_state, hashMemSize, MADV_RANDOM | MADV_WILLNEED) != 0)
+	if(madvise(ctx.long_state, hashMemSize, MADV_RANDOM | MADV_WILLNEED) != 0)
 		msg->warning = "madvise failed";
 
-	ptr->ctx_info[1] = 0;
-	if(use_mlock != 0 && mlock(ptr->long_state, hashMemSize) != 0)
+	ctx.ctx_info[1] = 0;
+	if(use_mlock != 0 && mlock(ctx.long_state, hashMemSize) != 0)
 		msg->warning = "mlock failed";
 	else
-		ptr->ctx_info[1] = 1;
+		ctx.ctx_info[1] = 1;
 
-	return ptr;
 #endif // _WIN32
 }
 
-void cryptonight_free_ctx(cryptonight_ctx* ctx)
+void cryptonight_free_ctx(cryptonight_ctx& ctx)
 {
 	auto neededAlgorithms = ::jconf::inst()->GetCurrentCoinSelection().GetAllAlgorithms();
 
@@ -285,19 +276,17 @@ void cryptonight_free_ctx(cryptonight_ctx* ctx)
 		hashMemSize = std::max(hashMemSize, algo.L3());
 	}
 
-	if(ctx->ctx_info[0] != 0)
+	if(ctx.ctx_info[0] != 0)
 	{
 #ifdef _WIN32
-		VirtualFree(ctx->long_state, 0, MEM_RELEASE);
+		VirtualFree(ctx.long_state, 0, MEM_RELEASE);
 #else
-		if(ctx->ctx_info[1] != 0)
-			munlock(ctx->long_state, hashMemSize);
-		munmap(ctx->long_state, hashMemSize);
+		if(ctx.ctx_info[1] != 0)
+			munlock(ctx.long_state, hashMemSize);
+		munmap(ctx.long_state, hashMemSize);
 #endif // _WIN32
 	}
 	else
-		_mm_free(ctx->long_state);
-
-	_mm_free(ctx);
+		_mm_free(ctx.long_state);
 }
 

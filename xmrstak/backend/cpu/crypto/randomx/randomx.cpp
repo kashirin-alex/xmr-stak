@@ -130,8 +130,7 @@ RandomX_ConfigurationBase::RandomX_ConfigurationBase()
 
 static uint32_t Log2(size_t value) { return (value > 1) ? (Log2(value / 2) + 1) : 0; }
 
-void RandomX_ConfigurationBase::Apply()
-{
+void RandomX_ConfigurationBase::Apply() {
 	ScratchpadL1Mask_Calculated = (ScratchpadL1_Size / sizeof(uint64_t) - 1) * 8;
 	ScratchpadL1Mask16_Calculated = (ScratchpadL1_Size / sizeof(uint64_t) / 2 - 1) * 16;
 	ScratchpadL2Mask_Calculated = (ScratchpadL2_Size / sizeof(uint64_t) - 1) * 8;
@@ -249,36 +248,17 @@ randomx_cache *randomx_alloc_cache(randomx_flags flags) {
 
 		try {
 			cache = new randomx_cache();
+			cache->jit = new randomx::JitCompiler();
+			cache->initialize = &randomx::initCacheCompile;
+			cache->datasetInit = cache->jit->getDatasetInitFunc();
+
 			switch (flags & (RANDOMX_FLAG_JIT | RANDOMX_FLAG_LARGE_PAGES)) {
-				case RANDOMX_FLAG_DEFAULT:
-					cache->dealloc = &randomx::deallocCache<randomx::DefaultAllocator>;
-					cache->jit = nullptr;
-					cache->initialize = &randomx::initCache;
-					cache->datasetInit = &randomx::initDataset;
-					cache->memory = (uint8_t*)randomx::DefaultAllocator::allocMemory(RANDOMX_CACHE_MAX_SIZE);
-					break;
 
 				case RANDOMX_FLAG_JIT:
-					cache->dealloc = &randomx::deallocCache<randomx::DefaultAllocator>;
-					cache->jit = new randomx::JitCompiler();
-					cache->initialize = &randomx::initCacheCompile;
-					cache->datasetInit = cache->jit->getDatasetInitFunc();
 					cache->memory = (uint8_t*)randomx::DefaultAllocator::allocMemory(RANDOMX_CACHE_MAX_SIZE);
 					break;
-
-				case RANDOMX_FLAG_LARGE_PAGES:
-					cache->dealloc = &randomx::deallocCache<randomx::LargePageAllocator>;
-					cache->jit = nullptr;
-					cache->initialize = &randomx::initCache;
-					cache->datasetInit = &randomx::initDataset;
-					cache->memory = (uint8_t*)randomx::LargePageAllocator::allocMemory(RANDOMX_CACHE_MAX_SIZE);
-					break;
-
+			
 				case RANDOMX_FLAG_JIT | RANDOMX_FLAG_LARGE_PAGES:
-					cache->dealloc = &randomx::deallocCache<randomx::LargePageAllocator>;
-					cache->jit = new randomx::JitCompiler();
-					cache->initialize = &randomx::initCacheCompile;
-					cache->datasetInit = cache->jit->getDatasetInitFunc();
 					cache->memory = (uint8_t*)randomx::LargePageAllocator::allocMemory(RANDOMX_CACHE_MAX_SIZE);
 					break;
 
@@ -312,7 +292,6 @@ randomx_dataset *randomx_alloc_dataset(randomx_flags flags) {
 		try {
 			dataset = new randomx_dataset();
 			if (flags & RANDOMX_FLAG_LARGE_PAGES) {
-				dataset->dealloc = &randomx::deallocDataset<randomx::LargePageAllocator>;
 				if(flags & RANDOMX_FLAG_1GB_PAGES) {
 					dataset->memory = (uint8_t*)randomx::LargePageAllocator::allocMemory(RANDOMX_DATASET_MAX_SIZE, 1024u);
 				}
@@ -321,7 +300,6 @@ randomx_dataset *randomx_alloc_dataset(randomx_flags flags) {
 				}
 			}
 			else {
-				dataset->dealloc = &randomx::deallocDataset<randomx::DefaultAllocator>;
 				dataset->memory = (uint8_t*)randomx::DefaultAllocator::allocMemory(RANDOMX_DATASET_MAX_SIZE);
 			}
 		}
@@ -357,34 +335,5 @@ void *randomx_get_dataset_memory(randomx_dataset *dataset) {
 void randomx_release_dataset(randomx_dataset *dataset) {
 	delete dataset;
 }
-
-randomx_vm *randomx_create_vm(randomx_dataset *dataset, uint8_t *scratchpad) {
-	assert(dataset != nullptr || !(flags & RANDOMX_FLAG_FULL_MEM));
-
-	randomx_vm* vm = nullptr;
-	try {
-		vm = new randomx_vm();
-		if(dataset)
-			vm->setDataset(dataset);
-		vm->setScratchpad(scratchpad);
-
-	} catch (std::exception &ex) {
-		delete vm;
-		vm = nullptr;
-	}
-	return vm;
-}
-
-void randomx_vm_set_dataset(randomx_vm *machine, randomx_dataset *dataset) {
-	assert(machine != nullptr);
-	assert(dataset != nullptr);
-	machine->setDataset(dataset);
-}
-
-
-void randomx_destroy_vm(randomx_vm *machine) {
-	delete machine;
-}
-
 
 

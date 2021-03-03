@@ -23,25 +23,11 @@
 #include "xmrstak/backend/cpu/hwlocHelper.hpp"
 #include "cryptonight_1.h"
 
-struct cryptonight_ctx;
 
-typedef void (*cn_mainloop_fun)(cryptonight_ctx* ctx);
-typedef void (*cn_double_mainloop_fun)(cryptonight_ctx*, cryptonight_ctx*);
-typedef void (*cn_hash_fun)(const void*, size_t, void*, cryptonight_ctx**, const xmrstak_algo&);
-
-void v4_compile_code(size_t N, cryptonight_ctx* ctx, int code_size);
-
-struct cryptonight_ctx
-{
-	uint8_t hash_state[224]; // Need only 200, explicit align
-	uint8_t* long_state;
+struct cryptonight_ctx {
+	uint8_t* long_state = nullptr;
 	uint8_t ctx_info[24]; //Use some of the extra memory for flags
-	cn_mainloop_fun loop_fn = nullptr;
-	cn_hash_fun hash_fn = nullptr;
-	uint8_t* fun_data = nullptr;
 	uint32_t numa = 0;
-
-	randomx_vm* m_rx_vm = nullptr;
 };
 
 
@@ -204,5 +190,8 @@ struct alloc_msg
 };
 
 size_t cryptonight_init(size_t use_fast_mem, size_t use_mlock, alloc_msg* msg);
-cryptonight_ctx* cryptonight_alloc_ctx(size_t use_fast_mem, size_t use_mlock, alloc_msg* msg);
-void cryptonight_free_ctx(cryptonight_ctx* ctx);
+
+void cryptonight_alloc_ctx(size_t use_fast_mem, size_t use_mlock, 
+													 alloc_msg* msg, cryptonight_ctx& ctx);
+
+void cryptonight_free_ctx(cryptonight_ctx& ctx);

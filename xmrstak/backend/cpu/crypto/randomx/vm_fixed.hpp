@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 #include "crypto/randomx/common.hpp"
 #include "crypto/randomx/program.hpp"
-#include "crypto/randomx/jit_compiler.hpp"
+#include "crypto/randomx/jit_compiler_x86.hpp"
 #include "crypto/randomx/allocator.hpp"
 #include "crypto/randomx/dataset.hpp"
 #include "crypto/randomx/aes_hash.hpp"
@@ -136,7 +136,10 @@ class randomx_vm final {
 
 
   __attribute__((__always_inline__)) inline
-	void setDataset(randomx_dataset* dataset) noexcept {
+	void setDataset(randomx_dataset* dataset) {
+		if (dataset == nullptr) {
+			throw std::invalid_argument("Dataset is Null");
+	  }
 		datasetPtr = dataset;
 	}
 	

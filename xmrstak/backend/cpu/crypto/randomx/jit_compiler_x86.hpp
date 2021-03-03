@@ -41,12 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 namespace randomx {
-	
-class Program;
-struct ProgramConfiguration;
-class SuperscalarProgram;
-class JitCompilerX86;
-struct Instruction;
+
 
 typedef void(JitCompilerX86::*InstructionGeneratorX86)(const Instruction&);
 

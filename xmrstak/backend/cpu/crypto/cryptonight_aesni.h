@@ -89,16 +89,3 @@ void flushInstructionCache(void* p, size_t size)
 
 }
 
-template <xmrstak_algo_id ALGO>
-static void RandomX_generator(const xmrstak::miner_work& work, cryptonight_ctx* ctx)	{
-	if(!ctx->m_rx_vm) {
-		printer::inst()->print_msg(LDEBUG,"%s create vm", POW(ALGO).Name().c_str());
-		ctx->m_rx_vm = randomx_create_vm(
-			randomX_global_ctx::inst().getDataset(ctx->numa), ctx->long_state);
-		randomx_apply_config(RandomX_MoneroConfig);
-	}
-
-	printer::inst()->print_msg(LDEBUG,"%s check for update dataset with %u threads", 
-														 POW(ALGO).Name().c_str(), xmrstak::globalStates::inst().iThreadCount);
-	randomX_global_ctx::inst().updateDataset(work.seed_hash, xmrstak::globalStates::inst().iThreadCount);
-}

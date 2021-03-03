@@ -144,14 +144,9 @@ constexpr uint32_t RX_ARQMA_ITER = 0x10000;
 
 inline xmrstak_algo POW(xmrstak_algo_id algo_id)
 {
-	static std::array<xmrstak_algo, 7> pow = {{
+	static std::array<xmrstak_algo, 2> pow = {{
 		{invalid_algo},
-		{randomX, randomX, _2MiB, _256KiB, _16KiB},
-		{randomX_loki, randomX_loki, _2MiB, _256KiB, _16KiB},
-		{randomX_wow, randomX_wow, _2MiB/2, _256KiB/2, _16KiB},
-		{randomX_arqma, randomX_arqma, _2MiB/8, _256KiB/2, _16KiB},
-		{randomX_safex, randomX_safex, _2MiB, _256KiB, _16KiB},
-		{randomX_keva, randomX_keva, _2MiB/4, _256KiB/2, _16KiB}
+		{randomX, randomX, _2MiB, _256KiB, _16KiB}
 	}};
 
 	return pow[algo_id];

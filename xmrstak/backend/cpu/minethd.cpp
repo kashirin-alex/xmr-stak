@@ -116,7 +116,8 @@ bool minethd::thd_setaffinity(std::thread::native_handle_type h, uint64_t cpu_id
 #endif
 }
 
-minethd::minethd(miner_work& pWork, size_t iNo, int64_t affinity) : affinity(affinity)
+minethd::minethd(miner_work& pWork, size_t iNo, int64_t affinity,
+								 uint8_t nthreads) : affinity(affinity)
 {
 	this->backendType = iBackend::CPU;
 	oWork = pWork;
@@ -127,7 +128,7 @@ minethd::minethd(miner_work& pWork, size_t iNo, int64_t affinity) : affinity(aff
 	std::unique_lock<std::mutex> lck(thd_aff_set);
 	std::future<void> order_guard = order_fix.get_future();
 
-	oWorkThd = std::thread(&minethd::work_main, this);
+	oWorkThd = std::thread(&minethd::work_main, this, nthreads);
 
 	order_guard.wait();
 
@@ -138,69 +139,31 @@ minethd::minethd(miner_work& pWork, size_t iNo, int64_t affinity) : affinity(aff
 #endif
 }
 
-cryptonight_ctx* minethd::minethd_alloc_ctx() {
-	cryptonight_ctx* ctx;
+void minethd::minethd_alloc_ctx(cryptonight_ctx& ctx) {
 	alloc_msg msg = {0};
-
 	switch(::jconf::inst()->GetSlowMemSetting())
 	{
 	case ::jconf::never_use:
-		ctx = cryptonight_alloc_ctx(1, 1, &msg);
-		if(ctx == NULL)
-			printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: %s", msg.warning);
-		else
-		{
-			ctx->hash_fn = nullptr;
-			ctx->loop_fn = nullptr;
-			ctx->fun_data = nullptr;
-			ctx->m_rx_vm = nullptr;
-		}
-		return ctx;
-
+		cryptonight_alloc_ctx(1, 1, &msg, ctx);
+		break;
 	case ::jconf::no_mlck:
-		ctx = cryptonight_alloc_ctx(1, 0, &msg);
-		if(ctx == NULL)
-			printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: %s", msg.warning);
-		else
-		{
-			ctx->hash_fn = nullptr;
-			ctx->loop_fn = nullptr;
-			ctx->fun_data = nullptr;
-			ctx->m_rx_vm = nullptr;
-		}
-		return ctx;
-
-	case ::jconf::print_warning:
-		ctx = cryptonight_alloc_ctx(1, 1, &msg);
-		if(msg.warning != NULL)
-			printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: %s", msg.warning);
-		if(ctx == NULL)
-			ctx = cryptonight_alloc_ctx(0, 0, NULL);
-
-		if(ctx != NULL)
-		{
-			ctx->hash_fn = nullptr;
-			ctx->loop_fn = nullptr;
-			ctx->fun_data = nullptr;
-			ctx->m_rx_vm = nullptr;
-		}
-		return ctx;
-
+		cryptonight_alloc_ctx(1, 0, &msg, ctx);
+		break;
 	case ::jconf::always_use:
-		ctx = cryptonight_alloc_ctx(0, 0, NULL);
-
-		ctx->hash_fn = nullptr;
-		ctx->loop_fn = nullptr;
-		ctx->fun_data = nullptr;
-		ctx->m_rx_vm = nullptr;
-
-		return ctx;
-
-	case ::jconf::unknown_value:
-		return NULL; //Shut up compiler
+		cryptonight_alloc_ctx(0, 0, &msg, ctx);
+		break;
+	case ::jconf::print_warning:
+		cryptonight_alloc_ctx(1, 1, &msg, ctx);
+		if(msg.warning)
+			printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: %s", msg.warning);
+		if(!ctx.long_state)
+			cryptonight_alloc_ctx(0, 0, NULL, ctx);
+		break;
+	default:
+		break;
 	}
-
-	return nullptr; //Should never happen
+	if(msg.warning)
+		printer::inst()->print_msg(L0, "MEMORY ALLOC FAILED: %s", msg.warning);
 }
 
 
@@ -234,7 +197,7 @@ bool minethd::self_test() {
 		return false; //Shut up compiler
 	}
 
-	if(msg.warning != nullptr)
+	if(msg.warning)
 		printer::inst()->print_msg(L0, "MEMORY INIT ERROR: %s", msg.warning);
 
 	if(res == 0 && fatal)
@@ -297,7 +260,7 @@ std::vector<iBackend*> minethd::thread_starter(uint32_t threadOffset, miner_work
 		else
 			printer::inst()->print_msg(L1, "Starting %dx thread, no affinity.", cfg.iMultiway);
 
-		minethd* thd = new minethd(pWork, i + threadOffset, cfg.iCpuAff);
+		minethd* thd = new minethd(pWork, i + threadOffset, cfg.iCpuAff, n);
 		pvThreads.push_back(thd);
 	}
 
@@ -331,9 +294,10 @@ static std::string getAsmName(const uint32_t num_hashes)
 }
 
 
-void minethd::work_main() {
+void minethd::work_main(uint8_t iThreadCount) {
 	printer::inst()->print_msg(
-		L0, "Started work_main thread-id=%u", uint32_t(iThreadNo));
+		L0, "Started work_main thread-id=%u/%u", 
+		uint32_t(iThreadNo), uint32_t(iThreadCount));
 
 	// keep init phase in some order
 	std::this_thread::sleep_for(std::chrono::milliseconds(2 * affinity));
@@ -345,16 +309,23 @@ void minethd::work_main() {
 	lck.release();
 	std::this_thread::yield();
 
-	cryptonight_ctx* ctx = minethd_alloc_ctx();
-	if(!ctx) {
+	cryptonight_ctx ctx;
+ 	minethd_alloc_ctx(ctx);
+	if(!ctx.long_state) {
 		printer::inst()->print_msg(L0, "ERROR: miner was not able to allocate memory.");
-		cryptonight_free_ctx(ctx);
 		win_exit(1);
 	}
-	ctx->numa = affinity < 0 ? 0 : numdaId(affinity);
+	ctx.numa = affinity < 0 ? 0 : numdaId(affinity);
 
-	randomX_global_ctx::inst().init(ctx->numa);
+	randomX_global_ctx::inst().init(ctx.numa);
 	globalStates::inst().iConsumeCnt++;
+
+	printer::inst()->print_msg(LDEBUG,"%s create vm", POW(randomX).Name().c_str());
+	randomx_vm vm;
+	vm.setDataset(randomX_global_ctx::inst().getDataset(ctx.numa));
+	vm.setScratchpad(ctx.long_state);
+	randomx_apply_config(RandomX_MoneroConfig);
+
 
 	uint8_t bHashOut[32];
 	uint64_t* piHashVal = (uint64_t*)(bHashOut + 24);
@@ -376,9 +347,6 @@ void minethd::work_main() {
 	uint32_t probe_resets;
 	uint32_t probe_it;
 	uint32_t probe_it_avg = 0;
-	uint8_t stepping_ratio = globalStates::inst().iThreadCount;
-	if(stepping_ratio < 4)
-		stepping_ratio = 4;
 
 	while(bQuit == 0) {
 
@@ -391,22 +359,22 @@ void minethd::work_main() {
 		}
 		assert(sizeof(job_result::sJobID) == sizeof(pool_job::sJobID));
 
-		RandomX_generator<randomX>(oWork, ctx);
-		auto& vm = *ctx->m_rx_vm;
+		randomX_global_ctx::inst().updateDataset(oWork.seed_hash, iThreadCount);
 
 		piNonce = (uint32_t*)(oWork.bWorkBlob + 39);
 
-		probes = probe_resets = probe_it = 0;
+		probes = probe_resets = 0;
 		iNonce_max = (iNonce_init + iNonce_vol) - 1;
 		
 		if(iProbes)
-			probe_it_avg = (iProbeIt / iProbes) * 2;
+			probe_it_avg = iProbeIt / iProbes;
 
-		iNonce = probe_it_avg / stepping_ratio;
+		probe_it = iNonce = probe_it_avg / 2;
 		printer::inst()->print_msg(L0, 
 			"new JobId=%u ThreadNo=%u Nonce=%u step=%u avg=%u", 
-			uint32_t(iJobNo), uint32_t(iThreadNo), iNonce_init, iNonce, probe_it_avg/2);
+			uint32_t(iJobNo), uint32_t(iThreadNo), iNonce_init, iNonce, probe_it_avg);
 		iNonce += iNonce_init;
+		probe_it_avg *= 2;
 
 		while(iGlobalJobNo.load(std::memory_order_relaxed) == iJobNo) {
 			if(iNonce >= iNonce_max) {
@@ -414,8 +382,7 @@ void minethd::work_main() {
 					"Reached iNonce Max ThreadNo=%u probes=%lu it=%u avg=%u resets=%u", 
 					uint32_t(iThreadNo), probes, probe_it, probe_it_avg, probe_resets);
 				iNonce = iNonce_init;
-				probes = probe_resets = probe_it = 0;
-				probe_it_avg /= stepping_ratio;
+				probe_it_avg = probes = probe_resets = probe_it = 0;
 			}
 
 			++probes;

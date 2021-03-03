@@ -103,28 +103,17 @@ namespace randomx {
 #endif
 #endif
 
-#if defined(_M_X64) || defined(__x86_64__)
-	#define RANDOMX_HAVE_COMPILER 1
-	class JitCompilerX86;
-	using JitCompiler = JitCompilerX86;
-#elif defined(__aarch64__)
-	#define RANDOMX_HAVE_COMPILER 1
-	class JitCompilerA64;
-	using JitCompiler = JitCompilerA64;
-#else
-	#define RANDOMX_HAVE_COMPILER 0
-	class JitCompilerFallback;
-	using JitCompiler = JitCompilerFallback;
-#endif
 
-	using addr_t = uint32_t;
+class JitCompilerX86;
+using JitCompiler = JitCompilerX86;
 
-	using int_reg_t = uint64_t;
+using addr_t = uint32_t;
+using int_reg_t = uint64_t;
 
-	struct fpu_reg_t {
-		double lo;
-		double hi;
-	};
+struct fpu_reg_t {
+	double lo;
+	double hi;
+};
 
 	#define ScratchpadL1Mask RandomX_CurrentConfig.ScratchpadL1Mask_Calculated
 	#define ScratchpadL1Mask16 RandomX_CurrentConfig.ScratchpadL1Mask16_Calculated
@@ -166,8 +155,5 @@ namespace randomx {
 
 	typedef void(ProgramFunc)(RegisterFile&, MemoryRegisters&, uint8_t* /* scratchpad */, uint64_t);
 	typedef void(DatasetInitFunc)(randomx_cache* cache, uint8_t* dataset, uint32_t startBlock, uint32_t endBlock);
-
-	typedef void(DatasetDeallocFunc)(randomx_dataset*);
-	typedef void(CacheDeallocFunc)(randomx_cache*);
 	typedef void(CacheInitializeFunc)(randomx_cache*, const void*, size_t);
 }

@@ -271,35 +271,4 @@ RANDOMX_EXPORT void *randomx_get_dataset_memory(randomx_dataset *dataset);
 */
 RANDOMX_EXPORT void randomx_release_dataset(randomx_dataset *dataset);
 
-/**
- * Creates and initializes a RandomX virtual machine.
- * @param dataset is a pointer to a randomx_dataset structure. Can be NULL
- *        if RANDOMX_FLAG_FULL_MEM is not set.
- *
- * @return Pointer to an initialized randomx_vm structure.
- *         Returns NULL if:
- *         (1) Scratchpad memory allocation fails.
- *         (2) The requested initialization flags are not supported on the current platform.
- *         (3) cache parameter is NULL and RANDOMX_FLAG_FULL_MEM is not set
- *         (4) dataset parameter is NULL and RANDOMX_FLAG_FULL_MEM is set
-*/
-RANDOMX_EXPORT randomx_vm *randomx_create_vm(randomx_dataset *dataset, uint8_t *scratchpad);
-
-/**
- * Reinitializes a virtual machine with a new Dataset.
- *
- * @param machine is a pointer to a randomx_vm structure that was initialized
- *        with RANDOMX_FLAG_FULL_MEM. Must not be NULL.
- * @param dataset is a pointer to an initialized randomx_dataset structure. Must not be NULL.
-*/
-RANDOMX_EXPORT void randomx_vm_set_dataset(randomx_vm *machine, randomx_dataset *dataset);
-
-/**
- * Releases all memory occupied by the randomx_vm structure.
- *
- * @param machine is a pointer to a previously created randomx_vm structure.
-*/
-RANDOMX_EXPORT void randomx_destroy_vm(randomx_vm *machine);
-
-
 #endif

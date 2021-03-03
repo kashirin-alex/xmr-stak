@@ -48,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/blake2/endian.h"
 #include "crypto/randomx/argon2.h"
 #include "crypto/randomx/argon2_core.h"
-#include "crypto/randomx/jit_compiler.hpp"
+#include "crypto/randomx/jit_compiler_x86.hpp"
 #include "crypto/randomx/intrin_portable.h"
 
 //static_assert(RANDOMX_ARGON_MEMORY % (RANDOMX_ARGON_LANES * ARGON2_SYNC_POINTS) == 0, "RANDOMX_ARGON_MEMORY - invalid value");
