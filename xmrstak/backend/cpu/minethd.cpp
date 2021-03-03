@@ -333,7 +333,7 @@ static std::string getAsmName(const uint32_t num_hashes)
 
 void minethd::work_main() {
 	printer::inst()->print_msg(
-		L0, "Started work_main thread-id=%d", int(iThreadNo));
+		L0, "Started work_main thread-id=%u", uint32_t(iThreadNo));
 
 	// keep init phase in some order
 	std::this_thread::sleep_for(std::chrono::milliseconds(2 * affinity));
@@ -360,20 +360,30 @@ void minethd::work_main() {
 	uint64_t* piHashVal = (uint64_t*)(bHashOut + 24);
 	uint32_t* piNonce;
 	uint32_t iNonce;
+	uint32_t iNonce_init;
+	uint32_t iNonce_max;
+	uint32_t iNonce_vol = globalStates::inst().iNonce_vol;
 
 	uint64_t tempHash[8];
 	uint32_t current_nonce;
 	auto& iGlobalJobNo = globalStates::inst().iGlobalJobNo;
+	auto& iProbes = globalStates::inst().iProbes;
+	auto& iProbeIt = globalStates::inst().iProbeIt;
+
 	auto miner_algo = ::jconf::inst()->GetCurrentCoinSelection().GetDescription().GetMiningAlgoRoot();
+
+	uint32_t probes;
+	uint32_t probe_resets;
+	uint32_t probe_it;
+	uint32_t probe_it_avg = 0;
+	uint8_t stepping_ratio = globalStates::inst().iThreadCount;
+	if(stepping_ratio < 4)
+		stepping_ratio = 4;
 
 	while(bQuit == 0) {
 
-		globalStates::inst().consume_work(iThreadNo, oWork, iJobNo, iNonce);
+		globalStates::inst().consume_work(iThreadNo, oWork, iJobNo, iNonce_init);
 		
-		printer::inst()->print_msg(L0, 
-			"new JobId=%d ThreadNo=%d Nonce=%u", 
-			int(iJobNo), int(iThreadNo), iNonce);
-
 		if(oWork.bStall) {
 			while(iGlobalJobNo.load(std::memory_order_relaxed) == iJobNo)
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
@@ -385,25 +395,61 @@ void minethd::work_main() {
 		auto& vm = *ctx->m_rx_vm;
 
 		piNonce = (uint32_t*)(oWork.bWorkBlob + 39);
-		*piNonce = current_nonce = iNonce;
-		vm.calculate_hash_first(
-			tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize);
+
+		probes = probe_resets = probe_it = 0;
+		iNonce_max = (iNonce_init + iNonce_vol) - 1;
+		
+		if(iProbes)
+			probe_it_avg = (iProbeIt / iProbes) * 2;
+
+		iNonce = probe_it_avg / stepping_ratio;
+		printer::inst()->print_msg(L0, 
+			"new JobId=%u ThreadNo=%u Nonce=%u step=%u avg=%u", 
+			uint32_t(iJobNo), uint32_t(iThreadNo), iNonce_init, iNonce, probe_it_avg/2);
+		iNonce += iNonce_init;
 
 		while(iGlobalJobNo.load(std::memory_order_relaxed) == iJobNo) {
+			if(iNonce >= iNonce_max) {
+				printer::inst()->print_msg(L0, 
+					"Reached iNonce Max ThreadNo=%u probes=%lu it=%u avg=%u resets=%u", 
+					uint32_t(iThreadNo), probes, probe_it, probe_it_avg, probe_resets);
+				iNonce = iNonce_init;
+				probes = probe_resets = probe_it = 0;
+				probe_it_avg /= stepping_ratio;
+			}
+
+			++probes;
+			if(!probe_resets || probes == probe_it_avg) {
+				*piNonce = current_nonce = iNonce;
+				vm.calculate_hash_first(
+					tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize);
+				probes = 0;
+				++probe_resets;
+			}
 
 			*piNonce = ++iNonce;
 			vm.calculate_hash_next(
 				tempHash, sizeof(tempHash), oWork.bWorkBlob, oWork.iWorkSize, bHashOut);
 
+			++probe_it;
 			iHashCount.fetch_add(1, std::memory_order_relaxed);
 
 			if(*piHashVal < oWork.iTarget) {
+
 				executor::inst()->push_event(
 					ex_event(
 						job_result(oWork.sJobID, current_nonce, bHashOut, iThreadNo, miner_algo), 
 						oWork.iPoolId
 					)
 				);
+				size_t c = iProbes.fetch_add(1, std::memory_order_relaxed) + 1;
+				probe_it_avg = iProbeIt.fetch_add(probe_it, std::memory_order_relaxed) + probe_it;
+				probe_it_avg /= c ? c : (c = 1);
+				printer::inst()->print_msg(L0, 
+					"Found hash ThreadNo=%u matches=%lu at-probe=%u avg=%u resets=%u", 
+					uint32_t(iThreadNo), c, probe_it, probe_it_avg, probe_resets);
+				probe_it = 0;
+				probe_it_avg *= 2;
 			}
 			current_nonce = iNonce;
 		}

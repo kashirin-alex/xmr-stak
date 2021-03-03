@@ -39,7 +39,7 @@ struct globalStates {
 
 		for(uint8_t i=0; i < iThreadCount; ++i) {
 			if(oGlobalWork.bNiceHash) {
-				iJobNonce[i] = nonce | (((UINT32_MAX >> 8) / iThreadCount) * i);
+				iJobNonce[i] = nonce | (iNonce_vol * i);
 			} else {
 				iJobNonce[i] = (UINT32_MAX / iThreadCount) * i;
 			}
@@ -58,17 +58,28 @@ struct globalStates {
 		jobLock.UnLock();
 	}
 
+	void set_nthreads(uint8_t n) {
+		iThreadCount = n;
+		iNonce_vol /= iThreadCount;
+	}
+
 	miner_work 						oGlobalWork;
 	std::atomic<uint64_t> iGlobalJobNo;
+	std::atomic<uint64_t> iProbes;
+	std::atomic<uint64_t> iProbeIt;
 	std::atomic<uint64_t> iConsumeCnt;
 	uint32_t 							iJobNonce[255] = {0};
+	uint32_t 							iNonce_vol;
 	uint64_t 							iThreadCount;
 	size_t 								pool_id;
 
   private:
 	globalStates() :
 		iGlobalJobNo(0),
+		iProbes(0),
+		iProbeIt(0),
 		iConsumeCnt(0),
+		iNonce_vol(UINT32_MAX >> 8),
 		iThreadCount(0),
 		pool_id(invalid_pool_id)
 	{

@@ -131,7 +131,7 @@ std::vector<iBackend*>* BackendConnector::thread_starter(miner_work& pWork)
 	}
 #endif
 
-	globalStates::inst().iThreadCount = pvThreads->size();
+	globalStates::inst().set_nthreads(pvThreads->size());
 	return pvThreads;
 }
 
