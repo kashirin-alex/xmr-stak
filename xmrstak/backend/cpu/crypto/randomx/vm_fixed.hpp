@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/aes_hash.cpp"
 #include "crypto/randomx/blake2/Blake2b.h"
 
-#define RX0_ProgramCount 8
+#define RX0_ProgramCount 	8
 
 namespace randomx {
 
@@ -185,17 +185,12 @@ class randomx_vm final {
 	void run(void* seed) noexcept {
 		compiler.prepare();
 		
-  	fillAes4Rx4<SW_AES>(
-			seed, 128 + RandomX_CurrentConfig.ProgramSize * 8, &program);
+  	fillAes4Rx4<SW_AES>(seed, sizeof(program), &program);
 
 		initialize();
 		compiler.generateProgram(program, config, vm_flags);
 		mem.memory = datasetPtr->memory + datasetOffset;
 		
-		//execute();
-    #ifdef XMRIG_ARM 
-		  memcpy(reg.f, config.eMask, sizeof(config.eMask));
-    #endif
 		compiler.getProgramFunc()(reg, mem, scratchpad, RandomX_CurrentConfig.ProgramIterations);
 	}
 

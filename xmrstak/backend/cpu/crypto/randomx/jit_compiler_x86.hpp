@@ -28,6 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+
+#define RX0_ProgramSize 	256
+
+
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -259,7 +263,7 @@ class JitCompilerX86 final {
 
 		mark_all_registers_used();
 
-		for (int i = 0, n = static_cast<int>(RandomX_CurrentConfig.ProgramSize); i < n; ++i) {
+		for (int i = 0; i < RX0_ProgramSize; ++i) {
 			Instruction& instr1 = prog(i);
 			Instruction& instr2 = prog(++i);
 			Instruction& instr3 = prog(++i);

@@ -33,7 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/instruction.hpp"
 #include "crypto/randomx/blake2/endian.h"
 
+
 namespace randomx {
+
 
 	struct ProgramConfiguration {
 		uint64_t eMask[2];
@@ -47,13 +49,10 @@ namespace randomx {
 		Instruction& operator()(int pc) noexcept {
 			return programBuffer[pc];
 		}
+
 		FORCE_INLINE
 		uint64_t getEntropy(int i) noexcept {
 			return load64(&entropyBuffer[i]);
-		}
-		FORCE_INLINE
-		uint32_t getSize() noexcept {
-			return RandomX_CurrentConfig.ProgramSize;
 		}
 		
 	private:

@@ -78,7 +78,6 @@ struct RandomX_ConfigurationBase {
 	uint32_t ScratchpadL2_Size;
 	uint32_t ScratchpadL3_Size;
 
-	uint32_t ProgramSize;
 	uint32_t ProgramIterations;
 
 	uint32_t JumpBits;

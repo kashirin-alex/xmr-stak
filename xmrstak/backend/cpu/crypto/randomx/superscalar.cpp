@@ -27,7 +27,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "crypto/randomx/configuration.h"
-#include "crypto/randomx/program.hpp"
 #include "crypto/randomx/blake2/endian.h"
 #include "crypto/randomx/intrin_portable.h"
 #include "crypto/randomx/reciprocal.h"
