@@ -78,6 +78,8 @@ struct RandomX_ConfigurationBase {
 	uint32_t ScratchpadL2_Size;
 	uint32_t ScratchpadL3_Size;
 
+	uint32_t ProgramSize;
+	uint32_t ProgramCount;
 	uint32_t ProgramIterations;
 
 	uint32_t JumpBits;
@@ -135,37 +137,6 @@ struct RandomX_ConfigurationBase {
 	uint32_t ScratchpadL3Mask64_Calculated;
 
 	uint32_t ConditionMask_Calculated;
-
-	int CEIL_IADD_RS;
-	int CEIL_IADD_M;
-	int CEIL_ISUB_R;
-	int CEIL_ISUB_M;
-	int CEIL_IMUL_R;
-	int CEIL_IMUL_M;
-	int CEIL_IMULH_R;
-	int CEIL_IMULH_M;
-	int CEIL_ISMULH_R;
-	int CEIL_ISMULH_M;
-	int CEIL_IMUL_RCP;
-	int CEIL_INEG_R;
-	int CEIL_IXOR_R;
-	int CEIL_IXOR_M;
-	int CEIL_IROR_R;
-	int CEIL_IROL_R;
-	int CEIL_ISWAP_R;
-	int CEIL_FSWAP_R;
-	int CEIL_FADD_R;
-	int CEIL_FADD_M;
-	int CEIL_FSUB_R;
-	int CEIL_FSUB_M;
-	int CEIL_FSCAL_R;
-	int CEIL_FMUL_R;
-	int CEIL_FDIV_M;
-	int CEIL_FSQRT_R;
-	int CEIL_CBRANCH;
-	int CEIL_CFROUND;
-	int CEIL_ISTORE;
-	int CEIL_NOP;
 };
 
 struct RandomX_ConfigurationMonero final : public RandomX_ConfigurationBase {};

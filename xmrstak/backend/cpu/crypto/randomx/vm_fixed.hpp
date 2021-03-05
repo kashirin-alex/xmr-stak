@@ -34,7 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <new>
 #include <cstdint>
 #include "crypto/randomx/common.hpp"
-#include "crypto/randomx/program.hpp"
 #include "crypto/randomx/jit_compiler_x86.hpp"
 #include "crypto/randomx/allocator.hpp"
 #include "crypto/randomx/dataset.hpp"
@@ -42,7 +41,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto/randomx/aes_hash.cpp"
 #include "crypto/randomx/blake2/Blake2b.h"
 
-#define RX0_ProgramCount 	8
 
 namespace randomx {
 
@@ -84,7 +82,7 @@ class randomx_vm final {
 		Blake2b::run(tempHash, sizeof(tempHash), input, inputSize);
 		fillAes1Rx4<SW_AES>(tempHash, ScratchpadSize, scratchpad); //initScratchpad(&tempHash);
 		resetRoundingMode();
-		for(uint32_t chain = 1; chain < RX0_ProgramCount; ++chain) {
+		for(uint32_t chain = 1; chain < RandomX_CurrentConfig.ProgramCount; ++chain) {
 			run(tempHash);
 			Blake2b::run(tempHash, sizeof(tempHash), &reg, sizeof(randomx::RegisterFile));
 		}
@@ -111,7 +109,7 @@ class randomx_vm final {
 													 const void* nextInput, size_t nextInputSize, 
 													 void* output) noexcept {
 		resetRoundingMode();
-		for(uint32_t chain = 1; chain < RX0_ProgramCount; ++chain) {
+		for(uint32_t chain = 1; chain < RandomX_CurrentConfig.ProgramCount; ++chain) {
 			run(outHash);
 			Blake2b::run(outHash, outlen, &reg, sizeof(randomx::RegisterFile));
 		}
@@ -161,12 +159,12 @@ class randomx_vm final {
 
   __attribute__((__always_inline__)) inline
 	void setFlags(uint32_t flags) noexcept { 
-    vm_flags = flags; 
+    compiler.setFlags(flags);
   }
 
   __attribute__((__always_inline__)) inline
 	uint32_t getFlags() const noexcept { 
-    return vm_flags; 
+    return compiler.getFlags(); 
   }
 
   __attribute__((__always_inline__)) inline
@@ -183,19 +181,11 @@ class randomx_vm final {
   __attribute__((__noinline__))
   //__attribute__((__always_inline__)) inline
 	void run(void* seed) noexcept {
-		compiler.prepare();
-		
+	
   	fillAes4Rx4<SW_AES>(seed, sizeof(program), &program);
 
-		initialize();
-		compiler.generateProgram(program, config, vm_flags);
-		mem.memory = datasetPtr->memory + datasetOffset;
-		
-		compiler.getProgramFunc()(reg, mem, scratchpad, RandomX_CurrentConfig.ProgramIterations);
-	}
+		// initialize
 
-  __attribute__((__always_inline__)) inline
-  void initialize() noexcept {
 	  store64(&reg.a[0].lo, randomx::getSmallPositiveFloatBits(program.getEntropy(0)));
 	  store64(&reg.a[0].hi, randomx::getSmallPositiveFloatBits(program.getEntropy(1)));
 	  store64(&reg.a[1].lo, randomx::getSmallPositiveFloatBits(program.getEntropy(2)));
@@ -204,30 +194,32 @@ class randomx_vm final {
 	  store64(&reg.a[2].hi, randomx::getSmallPositiveFloatBits(program.getEntropy(5)));
 	  store64(&reg.a[3].lo, randomx::getSmallPositiveFloatBits(program.getEntropy(6)));
 	  store64(&reg.a[3].hi, randomx::getSmallPositiveFloatBits(program.getEntropy(7)));
-	  mem.ma = program.getEntropy(8) & CacheLineAlignMask;
-	  mem.mx = program.getEntropy(10);
-	  auto addressRegisters = program.getEntropy(12);
-	  config.readReg0 = 0 + (addressRegisters & 1);
-  	addressRegisters >>= 1;
-  	config.readReg1 = 2 + (addressRegisters & 1);
-	  addressRegisters >>= 1;
-  	config.readReg2 = 4 + (addressRegisters & 1);
-	  addressRegisters >>= 1;
-  	config.readReg3 = 6 + (addressRegisters & 1);
-	  datasetOffset = (program.getEntropy(13) % (DatasetExtraItems + 1)) * randomx::CacheLineSize;
-  	store64(&config.eMask[0], randomx::getFloatMask(program.getEntropy(14)));
-	  store64(&config.eMask[1], randomx::getFloatMask(program.getEntropy(15)));
+
+  	randomx::MemoryRegisters mem(
+			program.getEntropy(10),
+			program.getEntropy(8) & CacheLineAlignMask,
+			datasetPtr->memory + // datasetOffset
+				((program.getEntropy(13) % (DatasetExtraItems + 1)) * randomx::CacheLineSize)
+		);
+		
+		compiler.generateProgram(
+			program,
+			randomx::ProgramConfiguration(
+				program.getEntropy(12),
+				randomx::getFloatMask(program.getEntropy(14)),
+				randomx::getFloatMask(program.getEntropy(15))
+			)
+		);
+
+		compiler.getProgramFunc()(
+			reg, mem, scratchpad, RandomX_CurrentConfig.ProgramIterations);
   }
 
 	alignas(64) randomx::Program              program;
   alignas(64) randomx::RegisterFile         reg;
-	alignas(16) randomx::ProgramConfiguration config;
-  randomx::MemoryRegisters                  mem;
 
 	uint8_t* scratchpad = nullptr;
   randomx_dataset* 		 datasetPtr;
-	uint64_t             datasetOffset;
-  uint32_t             vm_flags;
 
 	randomx::JitCompiler compiler;
 

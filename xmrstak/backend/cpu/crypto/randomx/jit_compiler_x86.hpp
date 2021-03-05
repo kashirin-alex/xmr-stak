@@ -28,10 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-
-#define RX0_ProgramSize 	256
-
-
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -149,18 +145,18 @@ class JitCompilerX86 final {
 
 	FORCE_INLINE 
 	void prepare() noexcept {
-		rx_prefetch_nta((const char*)(&engine) + 0); // 900ns less than loop
-		rx_prefetch_nta((const char*)(&engine) + 64);
-		rx_prefetch_nta((const char*)(&engine) + 128);
-		rx_prefetch_nta((const char*)(&engine) + 192);
-		for (size_t i = 0; i < sizeof(RandomX_CurrentConfig); i += 64)
-			rx_prefetch_nta((const char*)(&RandomX_CurrentConfig) + i);
+		//rx_prefetch_nta((const char*)(&engine) + 0); // 900ns less than loop
+		//rx_prefetch_nta((const char*)(&engine) + 64);
+		//rx_prefetch_nta((const char*)(&engine) + 128);
+		//rx_prefetch_nta((const char*)(&engine) + 192);
+		//for (size_t i = 0; i < sizeof(RandomX_CurrentConfig); i += 64)
+		//	rx_prefetch_nta((const char*)(&RandomX_CurrentConfig) + i);
 	}
 
 	FORCE_INLINE
-	void generateProgram(Program& prog, ProgramConfiguration& pcfg, 
-											 uint32_t flags) noexcept {
-		vm_flags = flags;
+	void generateProgram(Program& prog, 
+											 const ProgramConfiguration& pcfg) noexcept {
+		prepare();
 
 		generateProgramPrologue(prog, pcfg);
 
@@ -189,6 +185,16 @@ class JitCompilerX86 final {
 	ProgramFunc* getProgramFunc() noexcept {
 		return (ProgramFunc*)code;
 	}
+
+	FORCE_INLINE 
+	void setFlags(uint32_t _flags) noexcept { 
+    flags = _flags;
+  }
+
+	FORCE_INLINE 
+	uint32_t getFlags() const noexcept { 
+    return flags; 
+  }
 
 	FORCE_INLINE 
 	void generateDatasetInitCode() noexcept {
@@ -222,7 +228,7 @@ class JitCompilerX86 final {
 	uint8_t* code;
 	uint32_t codePos;
 	uint32_t codePosFirst;
-	uint32_t vm_flags;
+	uint32_t flags;
 
 	bool BranchesWithin32B = false;
 	bool hasAVX;
@@ -245,7 +251,8 @@ class JitCompilerX86 final {
 
 
 	FORCE_INLINE
-	void generateProgramPrologue(Program& prog, ProgramConfiguration& pcfg) noexcept {
+	void generateProgramPrologue(Program& prog, 
+															 const ProgramConfiguration& pcfg) noexcept {
 		codePos = ((uint8_t*)randomx_program_prologue_first_load) - 
 							((uint8_t*)randomx_program_prologue);
 		code[codePos + 2] = 0xc0 + pcfg.readReg0;
@@ -263,7 +270,7 @@ class JitCompilerX86 final {
 
 		mark_all_registers_used();
 
-		for (int i = 0; i < RX0_ProgramSize; ++i) {
+		for (int i = 0; i < RandomX_CurrentConfig.ProgramSize; ++i) {
 			Instruction& instr1 = prog(i);
 			Instruction& instr2 = prog(++i);
 			Instruction& instr3 = prog(++i);
@@ -287,15 +294,13 @@ class JitCompilerX86 final {
 			(this->*gen4)(instr4);
 		}
 
-		*(uint64_t*)(code + codePos) = 0xc03341c08b41ull + 
-														(static_cast<uint64_t>(pcfg.readReg2) << 16) +
-														(static_cast<uint64_t>(pcfg.readReg3) << 40);
+		*(uint64_t*)(code + codePos) = 0xc03341c08b41ull + pcfg.readReg2_3;
 		codePos += 6;
 	}
 
 	FORCE_INLINE
 	void generateProgramEpilogue(Program& prog, 
-															 ProgramConfiguration& pcfg) noexcept {
+															 const ProgramConfiguration& pcfg) noexcept {
 		*(uint64_t*)(code + codePos) = 0xc03349c08b49ull + 
 													(static_cast<uint64_t>(pcfg.readReg0) << 16) + 
 													(static_cast<uint64_t>(pcfg.readReg1) << 40);

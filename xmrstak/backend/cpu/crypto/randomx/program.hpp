@@ -39,7 +39,19 @@ namespace randomx {
 
 	struct ProgramConfiguration {
 		uint64_t eMask[2];
-		uint32_t readReg0, readReg1, readReg2, readReg3;
+		uint32_t readReg0, readReg1;
+		uint64_t readReg2_3;
+		ProgramConfiguration(uint64_t addressRegisters, 
+												 uint64_t mask0, uint64_t mask1) 
+				: readReg0(0 + (addressRegisters & 1)),
+					readReg1(2 + ((addressRegisters >>= 1) & 1)),
+					readReg2_3(
+						(uint64_t(uint32_t(4 + ((addressRegisters >>= 1) & 1))) << 16) +
+						(uint64_t(uint32_t(6 + ((addressRegisters >>= 1) & 1))) << 40)
+					) {
+			eMask[0] = mask0;
+			eMask[1] = mask1;
+		}
 	};
 
 	class Program final {

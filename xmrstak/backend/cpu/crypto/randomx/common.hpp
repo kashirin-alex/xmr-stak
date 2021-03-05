@@ -143,7 +143,9 @@ constexpr uint64_t dynamicMantissaMask = (1ULL << (mantissaSize + dynamicExponen
 
 struct MemoryRegisters {
 	addr_t mx, ma;
-	uint8_t* memory = nullptr;
+	uint8_t* memory;
+	MemoryRegisters(addr_t mx, addr_t ma, uint8_t* memory) 
+									: mx(mx), ma(ma), memory(memory) { }
 };
 
 	//register file in little-endian byte order

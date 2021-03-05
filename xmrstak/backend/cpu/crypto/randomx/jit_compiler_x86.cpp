@@ -312,7 +312,7 @@ namespace randomx {
 		const uint64_t dst = instr.dst;
 		if (src != dst) {
 			genAddressReg_rax_false(instr, src, code, codePos);
-			*(uint32_t*)(code + codePos) = static_cast<uint32_t>(0xC4D08B49 + (dst << 16));
+			*(uint32_t*)(code + codePos) = 0xC4D08B49 + (dst << 16);
 			codePos += 4;
 			*(uint64_t*)(code + codePos) = 0x0E04F6FB62ULL + (dst << 27);
 			codePos += 5;
@@ -386,8 +386,11 @@ namespace randomx {
 			*(uint32_t*)(code + codePos) = 0xc0334d + (((dst << 3) + src) << 16);
 			codePos += 3;
 		} else {
-			const uint64_t imm = instr.getImm32();
-			*(uint64_t*)(code + codePos) = (imm << 24) + 0xf08149 + (dst << 16);
+			uint64_t imm = instr.getImm32();
+			imm <<= 24;
+			imm += 0xf08149;
+			imm += dst << 16;
+			*(uint64_t*)(code + codePos) = imm;
 			codePos += 7;
 		}
 		registerUsage[dst] = codePos;
@@ -486,7 +489,6 @@ namespace randomx {
 	void JitCompilerX86::h_FSUB_M(const Instruction& instr) noexcept {
 		const uint32_t src = instr.src;
 		const uint32_t dst = instr.dst % RegisterCountFlt;
-
 		genAddressReg_rax_true(instr, src, code, codePos);
 		*(uint64_t*)(code + codePos) = 0x41660624e60f44f3ull;
 		codePos += 8;
@@ -537,10 +539,14 @@ namespace randomx {
 	void JitCompilerX86::h_CFROUND(const Instruction& instr) noexcept {
 		*(uint32_t*)(code + codePos) = 0x00C08B49 + (uint32_t(instr.src) << 16);
 		codePos += 3;
-		const int rotate = (static_cast<int>(instr.getImm32() & 63) - 2) & 63;
-		*(uint32_t*)(code + codePos) = 0x00C8C148 + (rotate << 24);
+		int rotate = instr.getImm32();
+		rotate &= 63;
+		rotate -= 2;
+		rotate &= 63;
+		rotate <<= 24;
+		*(uint32_t*)(code + codePos) = 0x00C8C148 + rotate;
 		codePos += 4;
-		if (vm_flags & RANDOMX_FLAG_AMD) {
+		if (flags & RANDOMX_FLAG_AMD) {
 			*(uint64_t*)(code + codePos) = 0x742024443B0CE083ULL;
 			codePos += 8;
 			*(uint64_t*)(code + codePos) = 0x8900EB0414AE0F0AULL;
@@ -555,12 +561,16 @@ namespace randomx {
 
 	__attribute__((__noinline__))
 	void JitCompilerX86::h_CFROUND_BMI2(const Instruction& instr) noexcept {
-		const uint64_t rotate = (static_cast<int>(instr.getImm32() & 63) - 2) & 63;
+		uint64_t rotate = instr.getImm32();
+		rotate &= 63;
+		rotate -= 2;
+		rotate &= 63;
+		rotate <<= 40;
 		*(uint64_t*)(code + codePos) = 0xC0F0FBC3C4ULL | 
 																	(uint64_t(instr.src) << 32) | 
-																	(rotate << 40);
+																	rotate;
 		codePos += 6;
-		if (vm_flags & RANDOMX_FLAG_AMD) {
+		if (flags & RANDOMX_FLAG_AMD) {
 			*(uint64_t*)(code + codePos) = 0x742024443B0CE083ULL;
 			codePos += 8;
 			*(uint64_t*)(code + codePos) = 0x8900EB0414AE0F0AULL;
@@ -603,11 +613,11 @@ namespace randomx {
 
 		if (jmp_offset >= -128) {
 			*(uint32_t*)(code + codePos) = 0x74 + (jmp_offset << 8);
+			codePos += 2;
 		}	else {
 			*(uint64_t*)(code + codePos) = 0x840f + ((static_cast<int64_t>(jmp_offset) - 4) << 16);
-			codePos += 4;
+			codePos += 6;
 		}
-		codePos += 2;
 
 		mark_all_registers_used();
 	}

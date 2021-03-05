@@ -53,6 +53,8 @@ RandomX_ConfigurationBase::RandomX_ConfigurationBase()
 	, ScratchpadL1_Size(16384)
 	, ScratchpadL2_Size(262144)
 	, ScratchpadL3_Size(2097152)
+	, ProgramSize(256)
+	, ProgramCount(8)
 	, ProgramIterations(2048)
 	, JumpBits(8)
 	, JumpOffset(8)
@@ -150,7 +152,38 @@ void RandomX_ConfigurationBase::Apply() {
 		#define JIT_HANDLE(x, prev) randomx::JitCompilerX86::engine[k] = &randomx::JitCompilerX86::h_##x
 	#endif
 
+	// temporaries
 	constexpr int CEIL_NULL = 0;
+	int CEIL_IADD_RS;
+	int CEIL_IADD_M;
+	int CEIL_ISUB_R;
+	int CEIL_ISUB_M;
+	int CEIL_IMUL_R;
+	int CEIL_IMUL_M;
+	int CEIL_IMULH_R;
+	int CEIL_IMULH_M;
+	int CEIL_ISMULH_R;
+	int CEIL_ISMULH_M;
+	int CEIL_IMUL_RCP;
+	int CEIL_INEG_R;
+	int CEIL_IXOR_R;
+	int CEIL_IXOR_M;
+	int CEIL_IROR_R;
+	int CEIL_IROL_R;
+	int CEIL_ISWAP_R;
+	int CEIL_FSWAP_R;
+	int CEIL_FADD_R;
+	int CEIL_FADD_M;
+	int CEIL_FSUB_R;
+	int CEIL_FSUB_M;
+	int CEIL_FSCAL_R;
+	int CEIL_FMUL_R;
+	int CEIL_FDIV_M;
+	int CEIL_FSQRT_R;
+	int CEIL_CBRANCH;
+	int CEIL_CFROUND;
+	int CEIL_ISTORE;
+	int CEIL_NOP;
 	int k = 0;
 
 	#define INST_HANDLE(x, prev) \
