@@ -234,10 +234,8 @@ class Blake2b final {
 
   FORCE_INLINE
   void compress(const uint8_t *block) noexcept {
-	  uint64_t m[16];
 	  uint64_t v[16];
 
-	  memcpy(m, block, BLAKE2B_BLOCKBYTES);
 	  memcpy(v, state.h, 64);
 	  memcpy(v + 8, blake2b_IV, 64);
 	  v[12] ^= state.t[0];
@@ -245,21 +243,21 @@ class Blake2b final {
 	  v[14] ^= state.f[0];
 	  v[15] ^= state.f[1];
 
-	  #define G(r, i, a, b, c, d)                                                \
-        a += b + m[blake2b_sigma[r][2 * i + 0]];                               \
-        b = rotr64(b ^ (c += (d = rotr64(d ^ a, 32))), 24);                    \
-        a += b + m[blake2b_sigma[r][2 * i + 1]];                               \
+	  #define G(r, i, a, b, c, d)                                                 \
+        a += b + ((const uint64_t*)block)[blake2b_sigma[r][i]]; 				        \
+        b = rotr64(b ^ (c += (d = rotr64(d ^ a, 32))), 24);                     \
+        a += b + ((const uint64_t*)block)[blake2b_sigma[r][i + 1]];             \
         b = rotr64(b ^ (c += (d = rotr64(d ^ a, 16))), 63);
 
-	  #define ROUND(r)                                                           \
-        G(r, 0, v[0], v[4], v[8], v[12]);                                      \
-        G(r, 1, v[1], v[5], v[9], v[13]);                                      \
-        G(r, 2, v[2], v[6], v[10], v[14]);                                     \
-        G(r, 3, v[3], v[7], v[11], v[15]);                                     \
-        G(r, 4, v[0], v[5], v[10], v[15]);                                     \
-        G(r, 5, v[1], v[6], v[11], v[12]);                                     \
-        G(r, 6, v[2], v[7], v[8], v[13]);                                      \
-        G(r, 7, v[3], v[4], v[9], v[14]);
+	  #define ROUND(r)                                                            \
+        G(r, 0,  v[0], v[4], v[8], v[12]);                                      \
+        G(r, 2,  v[1], v[5], v[9], v[13]);                                      \
+        G(r, 4,  v[2], v[6], v[10], v[14]);                                     \
+        G(r, 6,  v[3], v[7], v[11], v[15]);                                     \
+        G(r, 8,  v[0], v[5], v[10], v[15]);                                     \
+        G(r, 10, v[1], v[6], v[11], v[12]);                                     \
+        G(r, 12, v[2], v[7], v[8], v[13]);                                      \
+        G(r, 14, v[3], v[4], v[9], v[14]);
 
 	  ROUND(0);
 	  ROUND(1);
